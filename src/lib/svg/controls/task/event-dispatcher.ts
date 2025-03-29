@@ -41,8 +41,8 @@ export class TaskControlEventDispatcher {
 
   private constructor() {
     // Enable debug mode for DOM inspector and animator
-    domInspector.setDebug(true);
-    svgAnimator.setDebug(true);
+    domInspector.setDebug(false);
+    svgAnimator.setDebug(false);
   }
 
   public static getInstance(): TaskControlEventDispatcher {
