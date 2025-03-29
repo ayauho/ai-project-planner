@@ -149,6 +149,7 @@ class Logger {
    */
   private shouldShowLog(keywords: string[]): boolean {
     // Highest priority rule: If SHOW_BACKEND_LOGS is true, always show logs
+    console.log('process.env.SHOW_BACKEND_LOGS', process.env.SHOW_BACKEND_LOGS)
     if (process.env.SHOW_BACKEND_LOGS === 'true') {
       return true;
     }
