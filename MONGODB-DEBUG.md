@@ -11,7 +11,7 @@ Run the MongoDB connection test inside the app container:
 docker exec -it ai-project-planner-app-1 npm install mongodb dotenv
 
 # Run the diagnostic script
-docker exec -it ai-project-planner-app-1 node app-mongo-test.js
+docker exec -it ai-project-planner-app-1 node app-mongo-test.cjs
 ```
 
 Test network connectivity:
@@ -26,7 +26,7 @@ If the diagnostic script shows that URL encoding is needed for the password:
 
 ```bash
 # Generate an updated .env file with URL-encoded password
-docker exec -it ai-project-planner-app-1 node fix-app-connection.js
+docker exec -it ai-project-planner-app-1 node fix-app-connection.cjs
 
 # Apply the updated .env file
 cp .env.updated .env
