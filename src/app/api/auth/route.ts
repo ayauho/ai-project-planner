@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Auth failed', { error }, 'auth security');
-    console.log('Auth error:', error)
     // Return the specific error message
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Authentication failed' },
