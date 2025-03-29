@@ -2,6 +2,13 @@
  * Client-side logging implementation with support for styling, keywords, and configuration
  */
 
+// Extend the Window interface to include our custom property
+declare global {
+  interface Window {
+    turn_on_logs: () => Promise<string>;
+  }
+}
+
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 export interface LoggerContext extends Record<string, unknown> {
@@ -23,16 +30,12 @@ export interface LoggerConfigFile {
 // Global flag to force enable logs
 let forceEnableLogs = false;
 
-// Type definition for the window with our custom functions
-declare global {
-  interface Window {
-    turn_on_logs?: () => Promise<string>;
-  }
-}
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
 
-// Make turn_on_logs available in window scope for browser environment
-if (typeof window !== 'undefined') {
-  window.turn_on_logs = async () => {
+// Make turn_on_logs available in window scope for browser environment only
+if (isBrowser) {
+  window.turn_on_logs = async (): Promise<string> => {
     forceEnableLogs = true;
     
     // In non-development mode, fetch the latest config from server
@@ -51,12 +54,39 @@ if (typeof window !== 'undefined') {
   };
 }
 
+/**
+ * Helper to safely access localStorage
+ */
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (!isBrowser) return null;
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.error('Error accessing localStorage:', e);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (!isBrowser) return;
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.error('Error writing to localStorage:', e);
+    }
+  }
+};
+
 class ClientLogger {
-  private configFile: LoggerConfigFile | null = null;
+  private configFile: LoggerConfigFile;
   private lastConfigRead = 0;
   private readonly CONFIG_CACHE_TTL = 5000; // 5 seconds
+  private isServerSide: boolean;
 
   constructor() {
+    // Check if we're in a server-side rendering context
+    this.isServerSide = !isBrowser;
+    this.configFile = this.getDefaultConfig();
     this.initializeConfig();
   }
 
@@ -65,73 +95,41 @@ class ClientLogger {
    */
   private initializeConfig(): void {
     try {
+      // Skip localStorage in server environment
+      if (this.isServerSide) {
+        return;
+      }
+
       // Try to get config from localStorage
-      const storedConfig = localStorage.getItem('logger.config');
+      const storedConfig = safeLocalStorage.getItem('logger.config');
       if (storedConfig) {
-        this.configFile = JSON.parse(storedConfig);
+        const parsedConfig = JSON.parse(storedConfig) as LoggerConfigFile;
+        this.configFile = parsedConfig;
         this.lastConfigRead = Date.now();
-      } else {
-        // Use different defaults based on environment
-        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'development') {
-          this.configFile = {
-            'hide-all': false,
-            'show-by-keyword': {
-              works: false,
-              keywords: []
-            },
-            'hide-by-keyword': {
-              works: false,
-              keywords: []
-            }
-          };
-        } else {
-          // In production, default to hiding all logs
-          this.configFile = {
-            'hide-all': true,
-            'show-by-keyword': {
-              works: false,
-              keywords: []
-            },
-            'hide-by-keyword': {
-              works: false,
-              keywords: []
-            }
-          };
-        }
       }
       
-      // Initialize syncing mechanism
-      if (typeof window !== 'undefined') {
+      // Initialize syncing mechanism (browser only)
+      if (isBrowser) {
         import('./logger-config-sync').then(({ syncLoggerConfig }) => {
-          syncLoggerConfig().catch(_e => console.error('Failed initial logger config sync'));
-        }).catch(_e => console.error('Failed to import logger-config-sync'));
+          syncLoggerConfig().catch(e => console.error('Failed initial logger config sync:', e));
+        }).catch(e => console.error('Failed to import logger-config-sync:', e));
       }
     } catch (error) {
       console.error('Failed to initialize logger config:', error);
-      // Default config on error
-      this.configFile = {
-        'hide-all': process.env.NODE_ENV !== 'development', // Hide in production
-        'show-by-keyword': {
-          works: false,
-          keywords: []
-        },
-        'hide-by-keyword': {
-          works: false,
-          keywords: []
-        }
-      };
+      // Default config is already set in constructor
     }
   }
 
   /**
-   * Read the config from localStorage if available
+   * Get default configuration based on environment
    */
-  private readConfig(): LoggerConfigFile {
-    const now = Date.now();
-    
-    // Default config to use if nothing else is available
-    const defaultConfig: LoggerConfigFile = {
-      'hide-all': false,
+  private getDefaultConfig(): LoggerConfigFile {
+    const isDev = typeof process !== 'undefined' && 
+                  process.env && 
+                  process.env.NODE_ENV === 'development';
+
+    return {
+      'hide-all': !isDev, // Hide logs in production by default
       'show-by-keyword': {
         works: false,
         keywords: []
@@ -141,29 +139,38 @@ class ClientLogger {
         keywords: []
       }
     };
+  }
+
+  /**
+   * Read the config from localStorage if available
+   */
+  private readConfig(): LoggerConfigFile {
+    // In server environment, use default config
+    if (this.isServerSide) {
+      return this.getDefaultConfig();
+    }
+
+    const now = Date.now();
     
     // Use cached config if it exists and is not expired
-    if (this.configFile && (now - this.lastConfigRead < this.CONFIG_CACHE_TTL)) {
+    if (now - this.lastConfigRead < this.CONFIG_CACHE_TTL) {
       return this.configFile;
     }
 
     try {
-      const storedConfig = localStorage.getItem('logger.config');
+      const storedConfig = safeLocalStorage.getItem('logger.config');
       if (storedConfig) {
-        this.configFile = JSON.parse(storedConfig);
-      } else {
-        // Use default config if not found in localStorage
-        this.configFile = { ...defaultConfig };
+        const parsedConfig = JSON.parse(storedConfig) as LoggerConfigFile;
+        this.configFile = parsedConfig;
       }
       
       this.lastConfigRead = now;
-      // Ensure we never return null
-      return this.configFile || defaultConfig;
+      return this.configFile;
     } catch (error) {
       console.error('Failed to read logger config:', error);
       
       // Return default config on error
-      return defaultConfig;
+      return this.getDefaultConfig();
     }
   }
 
@@ -171,6 +178,11 @@ class ClientLogger {
    * Extract the calling file path from the stack trace
    */
   private getCallerPath(): string {
+    // Don't try to get stack traces in server environment
+    if (this.isServerSide) {
+      return 'server';
+    }
+
     try {
       // Create an error to get the stack trace
       const err = new Error();
@@ -200,7 +212,7 @@ class ClientLogger {
         const fullPath = matches[1];
         
         // Extract the relative path by removing domain and protocol
-        const urlParts = fullPath.match(/(?:https?:\/\/[^/]+)?\/(.*)/);
+        const urlParts = fullPath.match(/(?:https?:\/\/[^/]+)?\/(.+)/);
         if (urlParts && urlParts[1]) {
           return urlParts[1];
         }
@@ -209,7 +221,7 @@ class ClientLogger {
       }
       
       return 'unknown';
-    } catch {
+    } catch (e) {
       return 'unknown';
     }
   }
@@ -258,6 +270,11 @@ class ClientLogger {
     // Force enable logs overrides everything
     if (forceEnableLogs) {
       return true;
+    }
+    
+    // On server side in production, hide all logs
+    if (this.isServerSide && process.env.NODE_ENV !== 'development') {
+      return false;
     }
     
     // Check environment - only show logs in development
@@ -349,6 +366,13 @@ class ClientLogger {
     const formattedMessage = this.formatMessage(level, message, contextToLog);
     const style = context?._style;
 
+    // In SSR, use simple console logging without styles
+    if (this.isServerSide) {
+      console[level](formattedMessage);
+      return;
+    }
+
+    // Browser-specific styled logging
     if (style) {
       // Use styled logging
       console[level](`%c${message}`, style, contextToLog);
@@ -390,6 +414,7 @@ class ClientLogger {
    * Reset the config cache to force a fresh read from localStorage
    */
   resetConfigCache(): void {
+    if (this.isServerSide) return;
     this.lastConfigRead = 0;
   }
 }
