@@ -5,15 +5,12 @@ import { taskRepository } from '@/lib/task/repository';
 import { TaskNotFoundError } from '@/lib/task/errors';
 import projectRepository from '@/lib/project/repository';
 import mongoose from 'mongoose';
-import { TaskIdRouteContext } from '@/lib/api/route-types';
 
 export async function GET(
   request: NextRequest,
-  context: TaskIdRouteContext
+  { params }: { params: { taskId: string } }
 ) {
-  const { taskId } = context.params;
-  
-  try {
+  const { taskId } = params;try {
     logger.info('Processing get task/project children request', { taskId }, 'task hierarchy api');
     const authenticatedRequest = await authenticateRequest(request);
     if (!authenticatedRequest.user) {
