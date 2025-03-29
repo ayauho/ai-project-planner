@@ -6,12 +6,9 @@ import { handleApiError } from '@/lib/error/api-handler';
 import { logger } from '@/lib/logger';
 import { CreateTaskInput } from '@/lib/task/types';
 
-// Using Next.js native type pattern instead of custom IdRouteContext
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = params.id;
+// Remove explicit type annotations and let Next.js infer the correct types
+export async function GET(request, context) {
+  const id = context.params.id;
   const requestContext = {
     url: request.url,
     method: request.method,
@@ -48,11 +45,8 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = params.id;
+export async function POST(request, context) {
+  const id = context.params.id;
   const requestContext = {
     url: request.url,
     method: request.method,

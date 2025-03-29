@@ -9,10 +9,16 @@ export default [
   ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      }
+    },
     plugins: {
       react: reactPlugin,
-      "unused-imports": unusedImports,
-      next: nextPlugin
+      "unused-imports": unusedImports
     },
     rules: {
       "no-unused-vars": "off",
@@ -26,6 +32,12 @@ export default [
       "react/jsx-uses-vars": "error"
     }
   },
-  // Add Next.js specific configuration
-  nextPlugin.configs.recommended
+  // Add Next.js config separately with its own plugins
+  {
+    files: ["**/*.{js,ts,jsx,tsx}"],
+    plugins: {
+      next: nextPlugin
+    },
+    rules: nextPlugin.configs.recommended.rules
+  }
 ];
