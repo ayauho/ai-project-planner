@@ -1,0 +1,186 @@
+/* 
+ * Transform Stabilization Styles 
+ * These styles help manage the transition between different phases of transform operations,
+ * particularly focusing on completely prohibiting all interaction until the workspace is fully stabilized.
+ */
+
+/* During transform initialization, block all transform transitions and prevent selection */
+body.transform-initializing,
+body.transform-initializing * {
+  transition: none !important;
+  animation: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Create a full overlay to block ALL interactions during initialization */
+body.transform-initializing::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 9998;
+  pointer-events: auto !important; /* Capture all pointer events */
+  cursor: wait !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  touch-action: none !important;
+}
+
+/* Prevent text selection during any drag event */
+body.transform-initializing::before,
+body.transform-interaction-prohibited::before {
+  -webkit-touch-callout: none !important;
+  touch-callout: none !important;
+}
+
+/* Hide all workspace elements during initialization */
+body.transform-initializing svg,
+body.transform-initializing svg *,
+body.transform-initializing .transform-group,
+body.transform-initializing .workspace-visual,
+body.transform-initializing .task-rect,
+body.transform-initializing .project-rect,
+body.transform-initializing .connection-line,
+body.transform-initializing .task-control-group,
+body.transform-initializing .counter-display,
+body.transform-initializing .project-counter {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  touch-action: none !important;
+}
+
+/* Loading spinner that is FIXED in the CENTER of the VIEWPORT using transform centering */
+body.transform-initializing::after,
+body.transform-interaction-prohibited::after {
+  content: "";
+  position: fixed; /* Fixed positioning relative to viewport */
+  top: 50%;       /* Center vertically */
+  left: 50%;      /* Center horizontally */
+  width: 60px;
+  height: 60px;
+  transform: translate(-50%, -50%); /* Perfect centering using transform */
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 5px solid rgba(33, 150, 243, 0.3);
+  border-top-color: #2196F3;
+  z-index: 100001; /* Ultra-high z-index */
+  box-sizing: border-box;
+  pointer-events: none !important; /* Ensure spinner can't be interacted with */
+  animation: spinner-rotation 1.2s infinite linear;
+}
+
+/* When transforms are stable, enable transitions for smooth panning/zooming */
+body.transform-stable .transform-group {
+  transition: transform 0.2s ease-out;
+  pointer-events: auto;
+}
+
+/* Additional interaction prohibition layer - completely blocks ALL interaction */
+body.transform-interaction-prohibited,
+body.transform-interaction-prohibited * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  touch-action: none !important;
+}
+
+body.transform-interaction-prohibited::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10000; /* Highest z-index to block everything */
+  pointer-events: auto !important; /* Capture ALL events */
+  cursor: wait !important;
+  touch-action: none !important;
+}
+
+/* Hide workspace elements during interaction prohibition */
+body.transform-interaction-prohibited svg,
+body.transform-interaction-prohibited svg *,
+body.transform-interaction-prohibited .transform-group,
+body.transform-interaction-prohibited .workspace-visual,
+body.transform-interaction-prohibited .task-rect,
+body.transform-interaction-prohibited .project-rect,
+body.transform-interaction-prohibited .connection-line,
+body.transform-interaction-prohibited .task-control-group,
+body.transform-interaction-prohibited .counter-display,
+body.transform-interaction-prohibited .project-counter {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  touch-action: none !important;
+}
+
+/* Mobile-friendly adjustments for the transform controls */
+@media (max-width: 768px) {
+  /* Make loading spinner smaller on mobile devices */
+  body.transform-initializing::after,
+  body.transform-interaction-prohibited::after {
+    width: 50px;
+    height: 50px;
+    border-width: 4px;
+  }
+  
+  /* Adjust transform group for better touchscreen interactions */
+  body.transform-stable .transform-group {
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Add delay to element visibility transition to prevent premature interaction */
+body.transform-stable svg,
+body.transform-stable .transform-group,
+body.transform-stable .task-rect,
+body.transform-stable .project-rect,
+body.transform-stable .connection-line,
+body.transform-stable .task-control-group,
+body.transform-stable .counter-display,
+body.transform-stable .project-counter {
+  transition: opacity 0.3s ease-out 0.2s !important; /* Add 200ms delay before showing elements */
+}
+
+/* Prevent selection CSS */
+html.prevent-selection,
+html.prevent-selection * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  pointer-events: none !important;
+}
+
+html.prevent-selection body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  pointer-events: auto !important;
+  cursor: wait !important;
+}
+
+/* Spinner rotation animation */
+@keyframes spinner-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

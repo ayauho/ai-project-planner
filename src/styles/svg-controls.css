@@ -1,0 +1,97 @@
+/* SVG control styles */
+.svg-task-control {
+  cursor: pointer;
+  pointer-events: all;
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+}
+
+.svg-task-control circle {
+  transition: r 0.2s ease;
+}
+
+/* Force-hidden element style for immediate hiding */
+.force-hidden-element {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Add indication when controls are active */
+body.mode-regenerate .task-split-button,
+body.mode-delete .task-split-button {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out !important;
+}
+
+body.mode-regenerate .svg-task-control.regenerate-control,
+body.mode-delete .svg-task-control.delete-control {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: all !important;
+  transition: opacity 0.3s ease-in, visibility 0.3s ease-in !important;
+}
+
+/* Disable controls during operations */
+body.controls-disabled .svg-task-control,
+body.controls-disabled .common-controls-container button {
+  pointer-events: none !important;
+  cursor: wait !important;
+}
+
+body.controls-disabled {
+  cursor: wait !important;
+}
+
+/* Use more distinct visual indicators for active mode buttons */
+.common-controls-container button.regenerate-active {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.common-controls-container button.delete-active {
+  background-color: #ef4444 !important;
+  color: white !important;
+}
+
+/* Add indicator for active mode in the UI */
+body.mode-regenerate .regenerate-control,
+body.mode-delete .delete-control {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+  70% {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+}
+
+/* Loading states */
+.delete-control.loading,
+.regenerate-control.loading {
+  cursor: wait !important;
+  pointer-events: none !important;
+}
+
+/* Ensure controls are interactive */
+.svg-task-control.regenerate-control,
+.svg-task-control.delete-control {
+  cursor: pointer !important;
+  pointer-events: all !important;
+}
+
+.controls-loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

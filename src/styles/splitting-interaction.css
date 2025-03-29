@@ -1,0 +1,136 @@
+/**
+ * Styles specifically for the task splitting interaction prohibition state
+ */
+
+/* When splitting is in progress, cursor indicates waiting */
+body.splitting-in-progress {
+  cursor: wait !important;
+}
+
+/* Create a semi-transparent white overlay that covers the entire page */
+body.splitting-in-progress::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(255, 255, 255, 0.5); /* White with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  
+  /* Add a subtle fade-in transition */
+  animation: splitting-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Fade-in animation for the overlay */
+@keyframes splitting-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Disable all interactions during splitting */
+body.splitting-in-progress .task-rect,
+body.splitting-in-progress .project-rect,
+body.splitting-in-progress .task-group,
+body.splitting-in-progress .project-group,
+body.splitting-in-progress .task-split-button,
+body.splitting-in-progress button:not(.modal-button):not(.dialog-button),
+body.splitting-in-progress .side-panel,
+body.splitting-in-progress .side-panel * {
+  pointer-events: none !important;
+}
+
+/* Keep critical UI elements above the overlay */
+body.splitting-in-progress .modal-container,
+body.splitting-in-progress .error-notification,
+body.splitting-in-progress .confirmation-dialog {
+  z-index: 10000 !important; /* Ensure these are above the overlay */
+  pointer-events: auto !important;
+}
+/**
+ * Styles specifically for the task splitting interaction prohibition state
+ */
+
+/* When splitting is in progress, cursor indicates waiting */
+body.splitting-in-progress {
+  cursor: wait !important;
+}
+
+/* Disable all interactions during splitting */
+body.splitting-in-progress .task-rect,
+body.splitting-in-progress .project-rect,
+body.splitting-in-progress .task-group,
+body.splitting-in-progress .project-group,
+body.splitting-in-progress .task-split-button,
+body.splitting-in-progress button:not(.modal-button):not(.dialog-button),
+body.splitting-in-progress .side-panel,
+body.splitting-in-progress .side-panel * {
+  pointer-events: none !important;
+}
+
+/* Subtle visual feedback on task elements during splitting */
+body.splitting-in-progress .task-group,
+body.splitting-in-progress .project-group {
+  filter: brightness(0.95);
+  transition: filter 0.3s ease;
+}
+
+/* The overlay itself is defined in control-modes.css for consistency with other operations */
+/**
+ * Styles for disabling interactions during task splitting
+ * Uses a half-opacity white overlay to indicate interaction prohibition
+ */
+
+/* When splitting is in progress, disable all pointer events */
+body.splitting-in-progress {
+  /* Use wait cursor to indicate processing */
+  cursor: wait !important;
+}
+
+/* Create a semi-transparent white overlay that covers the entire page */
+body.splitting-in-progress::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(255, 255, 255, 0.5); /* White with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  
+  /* Add a subtle fade-in transition */
+  animation: splitting-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Fade-in animation for the overlay */
+@keyframes splitting-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Keep task elements and controls visible but non-interactive */
+body.splitting-in-progress .task-rect,
+body.splitting-in-progress .project-rect,
+body.splitting-in-progress .task-split-button,
+body.splitting-in-progress .layer-controls *,
+body.splitting-in-progress button:not(.modal-button):not(.dialog-button),
+body.splitting-in-progress .side-panel,
+body.splitting-in-progress .side-panel * {
+  pointer-events: none !important;
+}
+
+/* Allow critical UI elements to remain interactive if needed */
+body.splitting-in-progress .modal-container,
+body.splitting-in-progress .error-notification,
+body.splitting-in-progress .confirmation-dialog {
+  z-index: 10000; /* Ensure these are above the overlay */
+  pointer-events: auto !important;
+}

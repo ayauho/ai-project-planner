@@ -1,0 +1,236 @@
+/* Styling for regenerate and delete modes */
+/* When a mode is active - show visual indicator */
+body.mode-regenerate .workspace-visual {
+  cursor: crosshair;
+}
+body.mode-delete .workspace-visual {
+  cursor: not-allowed;
+}
+/* Helper class for controls disabled state */
+body.controls-disabled {
+  pointer-events: none;
+  cursor: wait;
+}
+body.controls-disabled .workspace-visual {
+  cursor: wait !important;
+  opacity: 0.9;
+}
+body.controls-disabled .common-controls-container {
+  pointer-events: none;
+}
+
+/* White overlay for operation states */
+/* Regeneration operation in progress */
+body.regeneration-in-progress::after,
+body.controls-disabled.mode-regenerate::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(240, 245, 255, 0.5); /* Very light blue with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  animation: operation-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Deletion operation in progress */
+body.deletion-in-progress::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(255, 240, 240, 0.5); /* Very light red with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  animation: operation-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Fade-in animation for the overlay */
+@keyframes operation-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* White overlay for operation states */
+/* Regeneration operation in progress */
+body.regeneration-in-progress::after,
+body.controls-disabled.mode-regenerate::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(240, 245, 255, 0.5); /* Very light blue with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  animation: operation-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Deletion operation in progress */
+body.deletion-in-progress::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(255, 240, 240, 0.5); /* Very light red with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  animation: operation-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Splitting operation in progress */
+body.splitting-in-progress::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background-color: rgba(255, 255, 255, 0.5); /* Pure white with 50% opacity */
+  pointer-events: all !important;
+  cursor: wait !important;
+  animation: operation-overlay-fade 0.3s ease-in forwards;
+}
+
+/* Fade-in animation for the overlay */
+@keyframes operation-overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}/* Special styling for regenerate controls */
+.regenerate-control circle {
+  transition: r 0.2s ease-out, fill 0.2s ease-out;
+}
+
+.regenerate-control:hover circle:first-child {
+  fill: #2563eb;
+}
+
+/* Special styling for delete controls */
+.delete-control circle {
+  transition: r 0.2s ease-out, fill 0.2s ease-out;
+}
+
+.delete-control:hover circle:first-child {
+  fill: #dc2626;
+}
+
+/* Loading indicators */
+.regenerate-control .loading-spinner,
+.delete-control .loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* During operation in progress, hide non-essential elements */
+body.deletion-in-progress .task-split-button:not(.force-visible),
+body.controls-disabled .task-split-button:not(.force-visible),
+body.regeneration-in-progress .task-split-button:not(.force-visible),
+body.splitting-in-progress .task-split-button:not(.force-visible) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Keep critical UI elements above the overlay */
+body.controls-disabled .modal-container,
+body.controls-disabled .error-notification,
+body.controls-disabled .confirmation-dialog,
+body.deletion-in-progress .modal-container,
+body.deletion-in-progress .error-notification,
+body.deletion-in-progress .confirmation-dialog,
+body.regeneration-in-progress .modal-container,
+body.regeneration-in-progress .error-notification,
+body.regeneration-in-progress .confirmation-dialog,
+body.splitting-in-progress .modal-container,
+body.splitting-in-progress .error-notification,
+body.splitting-in-progress .confirmation-dialog {
+  z-index: 10000 !important; /* Ensure these are above the overlay */
+  pointer-events: auto !important;
+}
+
+/* Stronger selectors for common controls buttons to ensure they show proper active state */
+.common-controls-container[data-active-mode="regenerate"] [data-mode="regenerate"] {
+  background-color: #3b82f6 !important; /* bg-blue-500 */
+  color: white !important;
+}
+
+.common-controls-container[data-active-mode="delete"] [data-mode="delete"] {
+  background-color: #ef4444 !important; /* bg-red-500 */
+  color: white !important;
+}
+
+/* Add additional specificity to override any Tailwind classes */
+.common-controls-container [data-mode="regenerate"].regenerate-active {
+  background-color: #3b82f6 !important; /* bg-blue-500 */
+  color: white !important;
+}
+
+.common-controls-container [data-mode="delete"].delete-active {
+  background-color: #ef4444 !important; /* bg-red-500 */
+  color: white !important;
+}
+
+/* Task styles for semi-transparent state */
+g[id^="task-"][data-state="semi-transparent"],
+.semi-transparent-task {
+  opacity: 0.7 !important;
+}
+
+g[id^="task-"][data-state="semi-transparent"] rect,
+.semi-transparent-task rect {
+  opacity: 0.6 !important;
+  fill-opacity: 0.9 !important;
+}
+
+/* Reset task styles when active */
+g[id^="task-"][data-state="active"] {
+  opacity: 1 !important;
+}
+
+g[id^="task-"][data-state="active"] rect {
+  opacity: 1 !important;
+  fill-opacity: 1 !important;
+}
+
+/* Ensure SVG controls are properly hidden when needed */
+.force-hidden-element,
+.regenerate-control.force-hidden-element, 
+.delete-control.force-hidden-element,
+g.regenerate-control.force-hidden-element, 
+g.delete-control.force-hidden-element {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}

@@ -1,0 +1,52 @@
+/* Specialized stylesheet for SVG animation with extra specificity */
+
+/* Task elements */
+#root svg g#task-rect.task-rect,
+#root svg g.task-rect,
+#root svg g.project-rect {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* Connection lines */
+#root svg path.connection-line,
+#root svg .layer-connections path,
+#root svg .connection-group path {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* Connection markers */
+#root svg .connection-marker,
+#root svg .layer-connections .connection-marker {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* Connection groups */
+#root svg .connection-group,
+#root svg .layer-connections g.connection-group {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* Split controls */
+#root svg .task-split-button,
+#root svg [class*="task-control-"],
+#root svg g[class*="task-control-"] {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* Regenerate and delete controls */
+#root svg .regenerate-control,
+#root svg .delete-control,
+#root svg g.regenerate-control,
+#root svg g.delete-control {
+  transition: opacity 0.8s ease-out !important;
+}
+
+/* All SVG elements in general */
+#root svg * {
+  transition-duration: 0.8s !important;
+}
+
+/* Specific opacity handling for animating elements */
+[data-animating="true"] {
+  pointer-events: none !important;
+}

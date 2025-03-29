@@ -1,0 +1,989 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './control-overlay.css';
+@import './control-modes.css';
+@import './state-restoration.css';
+@import './workspace-loading.css';
+@import './transform-sync.css';
+@import './deletion-process.css';
+@import './splitting-interaction.css';
+@import './project-creation.css';
+@import './project-switching.css';
+@import './side-panel-transform.css';
+@import './transform-stabilization.css';
+@import './common-controls.css';
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 255, 255, 255;
+  
+  /* Default transform values */
+  --saved-transform-x: 0px;
+  --saved-transform-y: 0px;
+  --saved-transform-scale: 0.3;
+  
+  /* Side panel width for centering calculations */
+  --side-panel-width: 0px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 10, 10, 10;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer base {
+  h1 {
+    @apply text-2xl font-semibold;
+  }
+  h2 {
+    @apply text-xl font-semibold;
+  }
+  h3 {
+    @apply text-lg font-semibold;
+  }
+  a {
+    @apply text-blue-600 hover:text-blue-800;
+  }
+}
+
+/* STRUCTURAL APPROACH: Aggressive cursor and interaction disabling for counter displays */
+.counter-display:not(.split-control), 
+.project-counter,
+.embedded-counter,
+.task-counter-display,
+[data-project-counter="true"],
+[data-id*="project-counter"],
+[id*="project-counter"],
+.counter-clone,
+.preserve-counter,
+[class*="counter-"]:not(.split-control),
+[class*="project-counter-"] {
+  pointer-events: none !important;
+  cursor: default !important;
+  user-select: none !important;
+}
+
+/* Counter display elements - ensure non-interactive and always visible */
+.task-counter-display text,
+.task-counter-display rect,
+.project-counter text,
+.project-counter rect,
+.embedded-counter text,
+.embedded-counter rect,
+[data-project-counter="true"] text,
+[data-project-counter="true"] rect,
+[class*="project-counter-"] text,
+[class*="project-counter-"] rect,
+[id*="project-counter"] text,
+[id*="project-counter"] rect,
+.counter-text,
+.counter-background {
+  pointer-events: none !important;
+  cursor: default !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* STRUCTURAL APPROACH: Embedded counters always move with their parent project */
+.embedded-counter,
+g.project-counter,
+.project-counter,
+[data-project-counter="true"],
+.task-counter-display {
+  visibility: visible !important;
+  transition: opacity 0.3s ease-out !important;
+  pointer-events: none !important;
+}
+
+/* Targeted hide for new projects - only hide SVG workspace-related elements */
+.hide-project-rendering svg >g,
+.hide-project-rendering svg .transform-group,
+.hide-project-rendering .task-rect,
+.hide-project-rendering .project-rect,
+.hide-project-rendering .connection-line,
+.hide-project-rendering .task-control-group,
+.hide-project-rendering .regenerate-control,
+.hide-project-rendering .delete-control,
+.hide-project-rendering .svg-task-control,
+.hide-project-rendering .task-split-button,
+.hide-project-rendering svg .control-layer,
+.hide-project-rendering svg .layer-controls {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Special mode for first project creation - ensures reliable rendering */
+.first-project-creation-mode {
+  /* Disable all transitions during first project creation */
+  transition: none !important;
+}
+
+/* Disable transitions on all elements during first project creation */
+.first-project-creation-mode *,
+.first-project-creation-mode svg *,
+.first-project-creation-mode .transform-group,
+.first-project-creation-mode g,
+.first-project-creation-mode .task-rect,
+.first-project-creation-mode .project-rect {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Don't hide the CommonControlsGroup component itself, just the SVG controls */
+.hide-project-rendering .common-controls-group svg,
+.hide-project-rendering .common-controls-group path,
+.hide-project-rendering .common-controls-group circle {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Important: Keep UI buttons and navigation visible */
+.hide-project-rendering form button,
+.hide-project-rendering .side-panel button,
+.hide-project-rendering .project-list button,
+.hide-project-rendering nav button,
+.hide-project-rendering header button {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Show workspace content when ready */
+.show-project-rendering svg >g,
+.show-project-rendering svg .transform-group,
+.show-project-rendering .task-rect,
+.show-project-rendering .project-rect,
+.show-project-rendering .connection-line,
+.show-project-rendering .task-control-group,
+.show-project-rendering .regenerate-control,
+.show-project-rendering .delete-control,
+.show-project-rendering .svg-task-control,
+.show-project-rendering .task-split-button,
+.show-project-rendering svg .control-layer,
+.show-project-rendering svg .layer-controls,
+.show-project-rendering .common-controls-group svg,
+.show-project-rendering .common-controls-group path,
+.show-project-rendering .common-controls-group circle {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Disable transitions during project creation to prevent flickering */
+.creating-project *,
+.disabling-all-transitions *,
+.project-creation-in-progress * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Apply transform lock ONLY if strictly locked */
+body.transform-locked-strict .transform-group {
+  transform: translate(var(--initial-transform-x, 0px), var(--initial-transform-y, 0px)) 
+             scale(var(--initial-transform-scale, 0.7)) !important;
+  transition: none !important;
+}
+
+/* Allow normal transforms once zoom is enabled */
+body[data-transform-locked="true"]:not(.transform-locked-strict) .transform-group,
+body.zoom-pan-enabled .transform-group,
+body.zoom-pan-ready .transform-group,
+body.zoom-interaction .transform-group {
+  /* No !important - allow zoom to work */
+  transition: transform 0.2s ease-out;
+}
+
+/* Add special class to mark the first zoom attempt */
+body.first-zoom-attempt .transform-group {
+  /* Explicitly allow transforms to be changed */
+  transition: transform 0.2s ease-out !important;
+}
+
+/* For project counter and elements that need to be visible */
+.project-counter,
+.counter-display,
+[data-project-counter="true"] {
+  pointer-events: none !important;
+}
+
+/* Stabilize SVG during side panel transitions */
+.side-panel-transition .transform-group {
+  transition: none !important;
+}
+
+/* Ensure transform-group properly handles zoom */
+.transform-group {
+  will-change: transform;
+  transform-origin: 0 0; /* This is essential for proper cursor-relative zooming */
+  transition: transform 0.3s ease-out;
+  padding: 100px;
+}
+
+/* Special transform handling - no transitions during transform coordination */
+body[data-transform-centering="true"] svg .transform-group {
+  transition: none !important;
+}
+
+/* Debug indicator styles - hidden in production */
+#centering-debug-indicator {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Strong rule to always keep counters visible */
+body .embedded-counter,
+body:not(.is-centering) .embedded-counter,
+body .project-group .embedded-counter,
+body .project-group[data-state="active"] .embedded-counter,
+body .project-group[data-state="semi-transparent"] .embedded-counter {
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Only hide counter when project is hidden */
+body .project-group[data-state="hidden"] .embedded-counter {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Ensure embedded counters inherit transform from parent but stay positioned correctly */
+.project-group .embedded-counter {
+  pointer-events: none !important;
+}
+
+/* Counter text vertical alignment fix */
+.counter-text,
+.project-counter text,
+.embedded-counter text,
+[data-project-counter="true"] text,
+[class*="project-counter-"] text,
+[id*="project-counter"] text {
+  dominant-baseline: middle !important;
+  alignment-baseline: middle !important;
+  text-anchor: middle !important;
+  vertical-align: middle !important;
+}
+
+/* Project counter specific styling - default for active state */
+.project-counter rect,
+.project-counter[data-state="active"] rect {
+  fill: #ffffff; /* Match project rectangle background */
+  stroke: #2563eb; /* Match project rectangle border - blue for active */
+  stroke-width: 2px; /* Similar to project rectangle border - normal width for active */
+}
+
+/* Project counter styling for semi-transparent state */
+.project-counter[data-state="semi-transparent"] rect {
+  fill: #ffffff; /* Keep white background */
+  stroke: #94a3b8; /* Match project rectangle border - grey for semi-transparent */
+  stroke-width: 1px; /* Thinner border for semi-transparent */
+  opacity: 0.9; /* Slightly reduced opacity */
+}
+
+/* Force counter to appear on top of other elements in the same group */
+.embedded-counter rect,
+.embedded-counter text {
+  z-index: 10 !important;
+}
+
+/* Pure SVG approach - no CSS transform overrides */
+.bottom-counter {
+  pointer-events: none !important;
+}
+
+/* Split buttons - explicitly interactive */
+.task-split-button {
+  pointer-events: all !important;
+  cursor: pointer !important;
+}
+
+/* Clickable areas in split buttons */
+.task-split-button .split-button {
+  cursor: pointer !important;
+  pointer-events: all !important;
+}
+
+/* Hide elements until properly centered after project creation */
+.hide-elements-until-centered svg >g,
+.hide-elements-until-centered svg .transform-group,
+.hide-elements-until-centered .task-rect,
+.hide-elements-until-centered .project-rect,
+.hide-elements-until-centered .connection-line,
+.hide-elements-until-centered .task-control-group,
+.hide-elements-until-centered .regenerate-control,
+.hide-elements-until-centered .delete-control,
+.hide-elements-until-centered .svg-task-control,
+.hide-elements-until-centered .task-split-button,
+.hide-elements-until-centered svg .control-layer,
+.hide-elements-until-centered svg .layer-controls,
+.hide-elements-until-centered .common-controls-group svg,
+.hide-elements-until-centered .common-controls-group path,
+.hide-elements-until-centered .common-controls-group circle,
+.hide-elements-until-centered .counter-display,
+.hide-elements-until-centered .project-counter {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Global SVG text cursor fix */
+svg text {
+  cursor: default !important;
+}
+
+/* SVG layer structure */
+.layer-base {
+  pointer-events: none;
+}
+
+.layer-connections path,
+.layer-connections circle {
+  pointer-events: none;
+}
+
+.layer-content {
+  pointer-events: all;
+}
+
+.layer-controls {
+  pointer-events: all;
+}
+
+/* Avoid text selection during interactions */
+.workspace-visual {
+  user-select: none;
+}
+
+/* Disable transitions during project switching */
+.transform-group.no-transition {
+  transition: none !important;
+}
+
+/* Task rect, project rect */
+.task-rect, .project-rect {
+  transition: opacity 0.5s ease-out !important;
+}
+
+/* Add pointer cursor to all task and project rectangles and their content */
+.task-group, 
+.project-group,
+.task-group *,
+.project-group * {
+  cursor: pointer !important;
+}
+
+/* Only exception is for specific controls that have their own cursor */
+.task-split-button,
+.expand-button,
+.task-control-group {
+  cursor: pointer !important;
+}
+
+/* Ensure consistent border width for project rectangles */
+.project-group rect {
+  stroke-width: 2px !important;
+}
+
+.connection-line {
+  transition: opacity 0.5s ease-out !important;
+  /* SVG path 'd' attribute isn't a CSS property and can't be transitioned with CSS
+     Path animations need to be handled with JavaScript or SMIL animations */
+}
+
+.connection-marker {
+  transition: opacity 0.5s ease-out, cx 0.5s ease-out, cy 0.5s ease-out !important;
+}
+
+.connection-group {
+  transition: opacity 0.5s ease-out !important;
+}
+
+/* Enhanced transitions for task controls - synchronized timing with other elements */
+.task-control-group, 
+.task-split-button, 
+.regenerate-control, 
+.delete-control, 
+.svg-task-control {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out !important;
+}
+
+/* Direct style overrides for specific elements */
+.task-split-button,
+.task-control,
+.regenerate-control,
+.delete-control,
+[class*="-control-"],
+[data-task-id] {
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out !important;
+}
+
+/* Console message styles */
+.console-message {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  z-index: 9999;
+  font-family: monospace;
+  max-width: 80%;
+  max-height: 200px;
+  overflow: auto;
+}
+
+/* Enhanced state restoration styles */
+body[data-transform-locked="true"] .transform-group,
+body.transform-locked-strict .transform-group {
+  transition: none !important;
+}
+
+/* More aggressive approach to prevent transform transitions during critical operations */
+body.sr-loading .transform-group,
+body.sr-positioning .transform-group,
+body.project-switching .transform-group,
+body[data-transform-centering="true"] .transform-group {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Improve transform stability during state restoration */
+body.sr-loading svg *,
+body.sr-positioning svg *,
+body.project-switching svg *,
+body[data-transform-centering="true"] svg * {
+  transition-property: opacity, visibility !important;
+  transition-duration: 0.3s !important;
+  transition-timing-function: ease-out !important;
+}
+
+/* Override transform property to ensure no transform transitions during critical phases */
+body.sr-loading svg .transform-group,
+body.sr-positioning svg .transform-group,
+body.project-switching svg .transform-group,
+body[data-transform-centering="true"] svg .transform-group {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Final state transitions for smooth reveal */
+body.sr-revealing svg * {
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out !important;
+}
+
+/* Ensure absolute positioning during state restoration */
+body.sr-loading .transform-group,
+body.sr-positioning .transform-group {
+  position: absolute !important;
+}
+
+/* Loading indicator styles */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #3f51b5;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Define priority levels for transform operations */
+body[data-transform-priority="highest"] .transform-group {
+  /* Style for highest priority transforms - useful for debugging */
+  outline: 2px solid rgba(244, 67, 54, 0.3);
+}
+
+/* Fix position and visibility of control elements on mobile */
+.task-split-button,
+.regenerate-control, 
+.delete-control,
+.svg-task-control {
+  position: relative !important;
+  transform-origin: center center !important;
+}
+
+/* Controls positioning for all screen sizes */
+.task-split-button,
+.regenerate-control, 
+.delete-control,
+.svg-task-control,
+g[class*="task-control"],
+[data-control-type="split"],
+[data-control-type="regenerate"],
+[data-control-type="delete"] {
+  /* Base positioning that works across devices */
+  transform-origin: center center !important;
+}
+
+/* Mobile and small screen adaptations */
+@media (max-width: 768px) {
+  /* Enhanced control positioning for mobile */
+  .task-split-button,
+  .regenerate-control, 
+  .delete-control,
+  .svg-task-control,
+  g[class*="task-control"],
+  [data-control-type="split"],
+  [data-control-type="regenerate"],
+  [data-control-type="delete"] {
+    /* Preserve original transform and increase visibility */
+    z-index: 1000 !important;
+  }
+  
+  /* Ensure layer-controls container has proper size */
+  .layer-controls {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+  }
+  
+  /* Ensure controls maintain their position relative to parent */
+  .layer-controls [data-task-id] {
+    /* Preserve the SVG transform */
+    transform-origin: center center !important;
+  }
+
+  /* Increase touch targets for better touchability */
+  button, 
+  [role="button"],
+  .clickable,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Increase text size for better readability */
+  body {
+    font-size: 16px;
+  }
+  
+  /* Increase spacing between interactive elements */
+  .space-y-2 {
+    margin-top: 0.625rem;
+    margin-bottom: 0.625rem;
+  }
+  
+  /* Ensure proper scroll behavior on touch devices */
+  .overflow-y-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Adjust workspace dimensions for small screens */
+  .workspace-visual {
+    touch-action: manipulation;
+  }
+  
+  /* Enhance counters and buttons visibility on small screens */
+  .counter-display text,
+  .project-counter text,
+  .embedded-counter text {
+    font-size: 14px;
+  }
+  
+  /* Task controls for touch devices - make bigger and more visible */
+  .task-control-group, 
+  .task-split-button, 
+  .regenerate-control, 
+  .delete-control, 
+  .svg-task-control {
+    transform-origin: center !important;
+    z-index: 1000 !important; /* Ensure higher z-index for visibility */
+  }
+  
+  /* Increase size of control buttons for better touch targets */
+  .task-split-button .split-button circle.button-bg,
+  .regenerate-control circle.button-bg,
+  .delete-control circle.button-bg {
+    r: 16 !important; /* Larger radius for buttons */
+  }
+  
+  /* Ensure task-split-button elements remain positioned correctly */
+  g.task-split-button[data-mobile="true"] {
+    /* Force visibility */
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent other transforms from affecting positioning */
+    transform-box: fill-box !important;
+  }
+  
+  /* Fix for layer-controls container on mobile */
+  .layer-controls {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    pointer-events: all !important;
+  }
+  
+  /* Make pointer areas larger on mobile */
+  .split-button circle[style*="pointer-events: all"] {
+    r: 18 !important; /* Larger click area */
+  }
+
+  /* Welcome message styles for mobile */
+  header .text-sm.text-gray-600.mr-2.mt-1 {
+    font-size: 0.75rem;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  
+  /* Remove blue highlight on touch */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Make project list items more touch-friendly */
+  [data-project-id] {
+    padding: 0.5rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Special styling for HTML split buttons */
+  body .task-overlay-control {
+    /* Make sure overlay controls stay in position */
+    transform: translate(-50%, -50%) scale(1.2) !important;
+  }
+  
+  /* Improved common controls positioning */
+  .common-controls-container {
+    right: 0 !important;
+    top: 60px !important; /* Position right below the header */
+    padding: 0.2rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0.5rem !important;
+    background-color: white;
+  }
+  
+  .common-controls-container >button {
+    border-top-right-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  .common-controls-container[data-expanded="false"] >button {
+    border-bottom-right-radius: 0 !important;
+  }
+  
+  .common-controls-container[data-expanded="true"] >button {
+    border-bottom-right-radius: 9999px !important;
+  }
+  
+  #common-controls-panel {
+    right: 0 !important;
+    margin-top: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+  
+  #common-controls-panel >button {
+    padding: 0.2rem !important;
+  }
+  
+  .common-controls-container svg,
+  #common-controls-panel svg {
+    margin: auto !important;
+  }
+  
+  /* API key window adjustments */
+  .DialogContent {
+    width: auto !important;
+    max-width: 92vw !important;
+  }
+  
+  /* Main content area */
+  main {
+    margin-left: 0 !important;
+    padding: 3px !important;
+  }
+  
+  /* Prevent main content from being too close to the edge */
+  [data-main-content="true"] {
+    padding: 3px !important;
+  }
+  
+  /* Fix positioning of collapse button for better touchability */
+  .panel-collapse-button {
+    width: 30px !important;
+    height: 30px !important;
+    top: 5px !important;
+    right: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Ensure side panel opacity transitions work properly */
+  [data-side-panel="true"][data-state="collapsed"] {
+    opacity: 0.5 !important;
+  }
+  
+  [data-side-panel="true"][data-state="expanded"] {
+    opacity: 1 !important;
+  }
+}
+
+/* Mobile view applied by data attribute */
+[data-mobile-view="true"] {
+  /* Increase touch targets for better touchability */
+  button, 
+  [role="button"],
+  .clickable,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Increase text size for better readability */
+  body {
+    font-size: 16px;
+  }
+  
+  /* Increase spacing between interactive elements */
+  .space-y-2 {
+    margin-top: 0.625rem;
+    margin-bottom: 0.625rem;
+  }
+  
+  /* Ensure proper scroll behavior on touch devices */
+  .overflow-y-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Adjust workspace dimensions for small screens */
+  .workspace-visual {
+    touch-action: manipulation;
+  }
+  
+  /* Enhance counters and buttons visibility on small screens */
+  .counter-display text,
+  .project-counter text,
+  .embedded-counter text {
+    font-size: 14px;
+  }
+  
+  /* Task controls for touch devices - make bigger and more visible */
+  .task-control-group, 
+  .task-split-button, 
+  .regenerate-control, 
+  .delete-control, 
+  .svg-task-control {
+    transform-origin: center !important;
+    z-index: 1000 !important; /* Ensure higher z-index for visibility */
+  }
+  
+  /* Increase size of control buttons for better touch targets */
+  .task-split-button .split-button circle.button-bg,
+  .regenerate-control circle.button-bg,
+  .delete-control circle.button-bg {
+    r: 16 !important; /* Larger radius for buttons */
+  }
+  
+  /* Ensure task-split-button elements remain positioned correctly */
+  g.task-split-button[data-mobile="true"] {
+    /* Force visibility */
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent other transforms from affecting positioning */
+    transform-box: fill-box !important;
+  }
+  
+  /* Fix for layer-controls container on mobile */
+  .layer-controls {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    pointer-events: all !important;
+  }
+  
+  /* Make pointer areas larger on mobile */
+  .split-button circle[style*="pointer-events: all"] {
+    r: 18 !important; /* Larger click area */
+  }
+
+  /* Welcome message styles for mobile */
+  header .text-sm.text-gray-600.mr-2.mt-1 {
+    font-size: 0.75rem;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  
+  /* Remove blue highlight on touch */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Make project list items more touch-friendly */
+  [data-project-id] {
+    padding: 0.5rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Special styling for HTML split buttons */
+  body .task-overlay-control {
+    /* Make sure overlay controls stay in position */
+    transform: translate(-50%, -50%) scale(1.2) !important;
+  }
+  
+  /* Improved common controls positioning */
+  .common-controls-container {
+    right: 0 !important;
+    top: 60px !important; /* Position right below the header */
+    padding: 0.2rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0.5rem !important;
+    background-color: white;
+  }
+  
+  .common-controls-container >button {
+    border-top-right-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  .common-controls-container[data-expanded="false"] >button {
+    border-bottom-right-radius: 0 !important;
+  }
+  
+  .common-controls-container[data-expanded="true"] >button {
+    border-bottom-right-radius: 9999px !important;
+  }
+  
+  #common-controls-panel {
+    right: 0 !important;
+    margin-top: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+  
+  #common-controls-panel >button {
+    padding: 0.2rem !important;
+  }
+  
+  .common-controls-container svg,
+  #common-controls-panel svg {
+    margin: auto !important;
+  }
+  
+  /* API key window adjustments */
+  .DialogContent {
+    width: auto !important;
+    max-width: 92vw !important;
+  }
+  
+  /* Main content area */
+  main {
+    margin-left: 0 !important;
+    padding: 3px !important;
+  }
+  
+  /* Prevent main content from being too close to the edge */
+  [data-main-content="true"] {
+    padding: 3px !important;
+  }
+  
+  /* Fix positioning of collapse button for better touchability */
+  .panel-collapse-button {
+    width: 30px !important;
+    height: 30px !important;
+    top: 5px !important;
+    right: 5px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Ensure side panel opacity transitions work properly */
+  [data-side-panel="true"][data-state="collapsed"] {
+    opacity: 0.5 !important;
+  }
+  
+  [data-side-panel="true"][data-state="expanded"] {
+    opacity: 1 !important;
+  }
+}
+
+/* CRITICAL: Force all project elements to be visible */
+.task-rect, 
+.project-rect, 
+.connection-line, 
+.task-control-group, 
+.counter-display,
+.project-counter,
+.regenerate-control, 
+.delete-control, 
+.svg-task-control, 
+.task-split-button,
+.control-layer,
+.layer-controls,
+.transform-group,
+.common-controls-container,
+.common-controls-group,
+.common-controls-panel {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Super high priority rules for common controls */
+html body .common-controls-container,
+html body .common-controls-group,
+html body [class*="common-controls"],
+html body [id*="common-controls"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+  z-index: 9999 !important;
+  position: fixed !important;
+  pointer-events: auto !important;
+}

@@ -1,0 +1,134 @@
+/* State restoration phase classes for body */
+body.sr-loading * {
+  transition: none !important;
+  animation: none !important;
+}
+
+body.sr-loading .task-rect,
+body.sr-loading .project-rect,
+body.sr-loading .counter-display,
+body.sr-loading .transform-group,
+body.sr-loading .connection-line,
+body.sr-loading .connection-marker,
+body.sr-loading svg g {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.sr-positioning * {
+  transition: none !important;
+  animation: none !important;
+}
+
+body.sr-positioning .transform-group {
+  /* Allow transform group to position but keep content invisible */
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.sr-positioning .task-rect,
+body.sr-positioning .project-rect,
+body.sr-positioning .counter-display,
+body.sr-positioning .connection-line,
+body.sr-positioning .connection-marker,
+body.sr-positioning svg g {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.sr-revealing .transform-group {
+  transition: transform 0.3s ease-out !important;
+}
+
+body.sr-revealing .task-rect,
+body.sr-revealing .project-rect {
+  transition: opacity 0.4s ease-out !important;
+}
+
+body.sr-revealing .counter-display {
+  transition: opacity 0.4s ease-out 0.1s !important;
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+body.sr-revealing .connection-line,
+body.sr-revealing .connection-marker {
+  transition: opacity 0.4s ease-out 0.2s !important;
+}
+
+/* Element state classes */
+.sr-pending {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.sr-ready {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease-out !important;
+}
+
+/* Counter display in all states */
+.sr-pending.counter-display,
+.sr-ready.counter-display,
+.sr-pending[data-project-counter="true"],
+.sr-ready[data-project-counter="true"] {
+  pointer-events: none !important;
+  cursor: default !important;
+  user-select: none !important;
+}
+
+/* Dragging operation classes */
+body.is-dragging * {
+  transition: none !important;
+  animation: none !important;
+}
+
+body.is-dragging .task-rect,
+body.is-dragging .project-rect,
+body.is-dragging .counter-display,
+body.is-dragging .connection-line,
+body.is-dragging .connection-marker {
+  pointer-events: none !important;
+}
+
+/* Centering operation classes */
+body.is-centering .transform-group {
+  transition: transform 0.5s cubic-bezier(0.215, 0.61, 0.355, 1) !important;
+}
+
+/* During centering, only hide counters that are being preserved */
+body.is-centering .counter-display:not(.preserved) {
+  opacity: 0.5;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Elements being preserved during centering */
+.preserved {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Elements being restored after centering */
+.restoring {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: opacity 0.3s ease-in !important;
+}
+
+/* Fixed counter during centering */
+.preserve-counter, .counter-clone {
+  position: fixed !important;
+  transform: none !important;
+  transition: none !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: default !important;
+}

@@ -1,0 +1,235 @@
+/* Project creation specific styling */
+.project-creation-in-progress {
+  /* Disable all transitions during project creation */
+  transition: none !important;
+}
+
+/* Disable transitions on all elements during project creation */
+.project-creation-in-progress *,
+.project-creation-in-progress svg *,
+.project-creation-in-progress .transform-group,
+.project-creation-in-progress g,
+.project-creation-in-progress .task-rect,
+.project-creation-in-progress .project-rect {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Hide transform group during new project centering */
+.transform-group.invisible-until-centered {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Show workspace content when ready */
+.show-project-rendering svg > g,
+.show-project-rendering svg .transform-group,
+.show-project-rendering .task-rect,
+.show-project-rendering .project-rect,
+.show-project-rendering .connection-line,
+.show-project-rendering .task-control-group,
+.show-project-rendering .regenerate-control,
+.show-project-rendering .delete-control,
+.show-project-rendering .svg-task-control,
+.show-project-rendering .task-split-button,
+.show-project-rendering svg .control-layer,
+.show-project-rendering svg .layer-controls,
+.show-project-rendering .common-controls-group svg,
+.show-project-rendering .common-controls-group path,
+.show-project-rendering .common-controls-group circle {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Special handling during project creation */
+.project-creation-in-progress .transform-group,
+.centering-new-project .transform-group,
+.disabling-all-transitions .transform-group {
+  transition: none !important;
+}
+
+/* Hide elements until centered */
+.centering-new-project .transform-group,
+.invisible-until-centered,
+.hide-elements-until-centered .transform-group,
+.disabling-all-transitions .transform-group {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Show elements after centering complete */
+.centering-new-project.transform-ready .transform-group,
+.transform-ready .transform-group,
+.transform-ready .invisible-until-centered {
+  visibility: visible !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Special handling for first project */
+.first-project-creation-mode .transform-group {
+  transition: none !important;
+}
+
+/* Always disable transitions during transform changes */
+.centering-in-progress .transform-group,
+.is-centering .transform-group,
+body[data-transform-centering="true"] .transform-group,
+body[data-transform-locked="true"] .transform-group {
+  transition: none !important;
+}
+
+/* Force transform ONLY during initial strict positioning phase */
+body.transform-locked-strict .transform-group {
+  transform: translate(var(--initial-transform-x, 0px), var(--initial-transform-y, 0px)) 
+             scale(var(--initial-transform-scale, 0.7)) !important;
+  transition: none !important; /* Disable transitions during strict lock */
+}
+
+/* Allow zoom/pan to work when ready - add higher specificity */
+body.zoom-pan-ready .transform-group,
+body.zoom-interaction .transform-group,
+body.zoom-pan-enabled .transform-group,
+body.transform-unlocked .transform-group {
+  /* No !important here - this allows the zoom behavior to work */
+  transition: transform 0.2s ease-out;
+}
+
+/* Only use explicit transform during strict lock */
+body.has-explicit-transform.transform-locked-strict .transform-group {
+  transform: translate(var(--initial-transform-x, 0px), var(--initial-transform-y, 0px)) 
+             scale(var(--initial-transform-scale, 0.7)) !important;
+  transition: none !important;
+}
+
+/* Remove any transform restrictions when user interacts */
+body.zoom-interaction .transform-group,
+body.zoom-pan-enabled .transform-group {
+  /* Override any locking - no !important to allow zoom behavior */
+  transition: transform 0.2s ease-out;
+}
+
+/* Ensure that interaction always wins against any transform locking */
+html body.zoom-interaction .transform-group,
+html body.zoom-pan-enabled .transform-group,
+html body.zoom-pan-ready:not(.transform-locked-strict) .transform-group {
+  /* Higher specificity but no !important to allow zoom behavior */
+}
+
+/* Project creation form styling */
+.project-creation-form {
+  max-width: 42rem;
+  margin: 0 auto;
+  transition: width 0.3s ease-out;
+}
+
+.project-creation-form textarea {
+  resize: vertical;
+  min-height: 8rem;
+  transition: height 0.2s ease;
+}
+
+.project-creation-form button {
+  transition: background-color 0.2s ease;
+}
+
+/* Adaptations for project creation form (ALL screen sizes) */
+.project-creation-form {
+  max-width: 100%;
+  padding: 0 1rem;
+  left: auto !important;
+}
+
+.project-creation-form button {
+  min-height: 44px;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  display: block;
+  margin: 1rem auto 0;
+  width: 100%;
+  max-width: 200px;
+}
+
+.project-creation-form textarea {
+  height: 150px;
+  font-size: 1rem;
+  padding: 0.75rem;
+}
+
+/* Standard screens - align form to the left */
+@media (min-width: 769px) {
+  /* Target the container div to align form to the left */
+  div.flex.justify-center.items-center.w-full {
+    justify-content: flex-start !important;
+    padding-left: 2rem;
+    align-items: flex-start !important;
+    margin-top: 2rem;
+  }
+  
+  /* Adjust form margins for left alignment */
+  .project-creation-form {
+    margin: 0 !important;
+    margin-left: 1rem !important;
+    max-width: 42rem;
+  }
+  
+  /* Left-align textarea on standard screens */
+  .project-creation-form textarea {
+    width: 100% !important;
+  }
+  
+  /* Align submit button to the left rather than center */
+  .project-creation-form button[type="submit"] {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Auto-hide side panel when creating project */
+body.creating-project [data-side-panel="true"] {
+  width: var(--side-panel-collapsed-width);
+  opacity: 0.5;
+}
+
+/* Improve accessibility for errors */
+#description-error {
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  background-color: rgba(254, 226, 226, 0.5);
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+/* Mobile-specific adaptations */
+@media (max-width: 768px) {
+  /* Fix centering when side panel is collapsed */
+  .project-creation-form {
+    width: calc(100% - var(--side-panel-collapsed-mobile-width, 48px));
+  }
+  
+  /* Center the project creation form */
+  div.flex.justify-center.items-center.w-full {
+    margin-left: var(--side-panel-collapsed-mobile-width);
+  }
+  
+  /* Auto-hide side panel when creating project (mobile version) */
+  body.creating-project [data-side-panel="true"] {
+    width: var(--side-panel-collapsed-mobile-width);
+  }
+}
+
+/* Mobile view detected by JS */
+body[data-mobile-view="true"] .project-creation-form {
+  width: calc(100% - var(--side-panel-collapsed-mobile-width, 48px));
+}
+
+body[data-mobile-view="true"] div.flex.justify-center.items-center.w-full {
+  margin-left: var(--side-panel-collapsed-mobile-width);
+}
+
+body[data-mobile-view="true"] body.creating-project [data-side-panel="true"] {
+  width: var(--side-panel-collapsed-mobile-width);
+}

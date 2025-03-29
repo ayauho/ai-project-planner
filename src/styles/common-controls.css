@@ -1,0 +1,138 @@
+/* Common Controls styling
+   Specialized styles for the floating controls panel and buttons */
+
+/* Common controls container styling for ALL screen sizes */
+.common-controls-container {
+  right: 0 !important;
+  top: 60px !important; /* Position right below the header */
+  padding: 4px !important; /* Consistent padding */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0.5rem !important;
+  background-color: white;
+  width: 44px !important; /* Match the panel width */
+  z-index: 60 !important;
+  position: fixed !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.common-controls-container > button {
+  border-top-right-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  width: 36px !important; /* Match button width in panel */
+  height: 36px !important; /* Match button height in panel */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.common-controls-container[data-expanded="false"] > button {
+  border-bottom-right-radius: 0 !important;
+}
+
+.common-controls-container[data-expanded="true"] {
+  border-bottom-left-radius: 0 !important;
+}
+
+.common-controls-container[data-expanded="true"] > button {
+  border-bottom-right-radius: 9999px !important;
+}
+
+#common-controls-panel {
+  right: 0 !important;
+  margin-top: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  width: 44px !important;
+  background-color: white;
+  display: none !important; /* Hidden by default, shown when expanded */
+  padding: 0 !important; /* Remove padding - will manage spacing with inner elements */
+}
+
+#common-controls-panel > button {
+  display: block !important;
+  width: 32px !important;
+  height: 32px !important;
+  margin: 4px auto !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  left: 0 !important;
+  right: 0 !important;
+  border-radius: 50% !important;
+  background-color: transparent !important;
+  position: relative !important;
+}
+    
+/* Create smaller circular backgrounds */
+#common-controls-panel > button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px !important;
+  height: 28px !important;
+  background-color: #f3f4f6 !important; /* Light grey background */
+  border-radius: 50% !important;
+  z-index: -1 !important;
+}
+
+.common-controls-container svg,
+#common-controls-panel svg {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 auto !important; /* Remove margin, let flex handle centering */
+}
+
+/* Show panel when expanded */
+.common-controls-container[data-expanded="true"] #common-controls-panel {
+  display: block !important;
+  text-align: center !important;
+}
+
+/* Mobile adaptations */
+@media (max-width: 768px) {
+  /* Ensure common controls always appear above side panel */
+  .common-controls-container,
+  .common-controls-group {
+    z-index: 65 !important; /* Higher than default */
+  }
+  
+  /* Fix centering for common controls panel on small screens */
+  #common-controls-panel {
+    box-sizing: content-box !important;
+    padding: 0 !important;
+    width: 44px !important;
+  }
+  
+  /* Ensure the button background remains properly sized on mobile */
+  #common-controls-panel > button {
+    width: 32px !important;
+    height: 32px !important;
+    display: block !important;
+    margin: 4px auto !important;
+  }
+  
+  #common-controls-panel > button::before {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+/* Enhanced touch interface for all potential touch devices regardless of screen size */
+@media (pointer: coarse) {
+  /* Make common control buttons have adequate touch targets */
+  .common-controls-container button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

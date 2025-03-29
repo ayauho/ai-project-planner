@@ -1,0 +1,55 @@
+/* Prevent any transform transitions during initial load */
+.workspace-loading .transform-group,
+body:not(.transform-ready) .transform-group {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Hide SVG until transform is ready */
+body:not(.transform-ready) svg,
+body:not(.transform-ready) .svg-container svg {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Exception: Always keep panel collapse button visible */
+body:not(.transform-ready) .panel-collapse-button svg,
+body:not(.transform-ready) [data-side-panel="true"] .panel-collapse-button svg {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Apply transform from CSS variables when available */
+body.has-saved-transform .transform-group {
+  transform: translate(var(--saved-transform-x), var(--saved-transform-y)) scale(var(--saved-transform-scale)) !important;
+}
+
+/* Pre-loading spinner */
+.pre-transform-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pre-transform-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #2563eb;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

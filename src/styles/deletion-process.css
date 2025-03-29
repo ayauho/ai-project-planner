@@ -1,0 +1,70 @@
+/* Styling for deletion and regeneration process */
+
+/* Elements being removed */
+.being-removed {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out !important;
+}
+
+/* Task rectangle being removed */
+.task-rect.being-removed,
+.project-rect.being-removed {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out !important;
+}
+
+/* Connection being removed */
+.connection-line.being-removed,
+.connection-group.being-removed {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out !important;
+}
+
+/* Controls being removed */
+.task-control.being-removed,
+.task-split-button.being-removed,
+.regenerate-control.being-removed,
+.delete-control.being-removed {
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out !important;
+}
+
+/* Force hidden elements */
+.force-hidden-element {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+  transition: none !important;
+}
+
+/* Force hidden controls */
+.force-hidden-control {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+/* Body states */
+body.deletion-in-progress,
+body.controls-disabled {
+  cursor: wait;
+}
+
+body.deletion-in-progress .workspace-visual,
+body.controls-disabled .workspace-visual {
+  cursor: wait !important;
+  pointer-events: none !important;
+}
+
+/* Ensure buttons remain clickable during operations */
+body.deletion-in-progress .common-controls-container button,
+body.controls-disabled .common-controls-container button {
+  pointer-events: all !important;
+}
+
+/* Override opacity for the controls container */
+body.deletion-in-progress .common-controls-container,
+body.controls-disabled .common-controls-container {
+  opacity: 1 !important;
+}

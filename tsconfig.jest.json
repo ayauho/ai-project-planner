@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src",
+    "jest.config.mjs",
+    "src/tests/test-env.setup.ts",
+    "src/tests/jest.setup.ts"
+  ]
+}

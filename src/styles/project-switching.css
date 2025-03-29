@@ -1,0 +1,25 @@
+/* Styles for project switching */
+.project-switching .transform-group {
+  transition: none !important;
+}
+
+.project-switching .task-rect,
+.project-switching .project-rect,
+.project-switching .counter-display,
+.project-switching .connection-line {
+  opacity: 0;
+  visibility: hidden;
+  transition: none !important;
+}
+
+/* Add CSS variables for transform values */
+:root {
+  --initial-transform-x: 0px;
+  --initial-transform-y: 0px;
+  --initial-transform-scale: 1;
+}
+
+/* Fix transform during project switches */
+body.project-switching .transform-group {
+  will-change: transform;
+}

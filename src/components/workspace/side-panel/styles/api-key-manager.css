@@ -1,0 +1,8 @@
+/* Fix Dialog background */
+.DialogOverlay {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.DialogContent {
+  background-color: white;
+}

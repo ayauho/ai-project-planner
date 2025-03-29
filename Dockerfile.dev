@@ -1,0 +1,53 @@
+FROM node:alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install required build dependencies and SSL utilities
+RUN apk add --no-cache python3 make g++ git openssl && \
+    # Create necessary directories with proper permissions
+    mkdir -p .next \
+            /etc/ssl/private \
+            /etc/ssl/certs && \
+    # Set directory permissions
+    chmod 755 /etc && \
+    chmod 755 /etc/ssl && \
+    chmod 700 /etc/ssl/private && \
+    chmod 755 /etc/ssl/certs
+
+# Copy package files first to leverage Docker cache
+COPY package*.json ./
+
+# Install dependencies with frozen lockfile for consistency
+RUN npm ci --only=development && \
+    # Clean npm cache to reduce image size
+    npm cache clean --force
+
+# Copy the rest of the code
+COPY . .
+
+# Copy SSL generation script
+COPY scripts/setup/ssl-generate.sh /usr/local/bin/ssl-generate.sh
+RUN chmod +x /usr/local/bin/ssl-generate.sh
+
+# Expose ports
+EXPOSE 8080 8443
+
+# Set development environment
+ENV NODE_ENV=development \
+    # Optimize Node.js for container environment
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    # Enable polling for file watching
+    CHOKIDAR_USEPOLLING=true \
+    WATCHPACK_POLLING=true
+
+# Entrypoint script to ensure SSL generation
+COPY scripts/setup/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Use entrypoint to generate SSL and start app
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --spider -q http://localhost:8080 || exit 1

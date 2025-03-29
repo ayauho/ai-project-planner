@@ -1,0 +1,31 @@
+import { StatusCodes } from 'http-status-codes';
+
+export const ERROR_CATEGORIES = {
+  VALIDATION: 'VALIDATION_ERROR',
+  AUTHENTICATION: 'AUTH_ERROR',
+  DATABASE: 'DB_ERROR',
+  DUPLICATE_KEY: 'DUPLICATE_KEY_ERROR',
+  NETWORK: 'NETWORK_ERROR',
+  SYSTEM: 'SYSTEM_ERROR',
+  UNKNOWN: 'UNKNOWN_ERROR'
+} as const;
+
+export const HTTP_STATUS_MAP = {
+  [ERROR_CATEGORIES.VALIDATION]: StatusCodes.BAD_REQUEST,
+  [ERROR_CATEGORIES.AUTHENTICATION]: StatusCodes.UNAUTHORIZED,
+  [ERROR_CATEGORIES.DATABASE]: StatusCodes.INTERNAL_SERVER_ERROR,
+  [ERROR_CATEGORIES.DUPLICATE_KEY]: StatusCodes.CONFLICT,
+  [ERROR_CATEGORIES.NETWORK]: StatusCodes.BAD_GATEWAY,
+  [ERROR_CATEGORIES.SYSTEM]: StatusCodes.INTERNAL_SERVER_ERROR,
+  [ERROR_CATEGORIES.UNKNOWN]: StatusCodes.INTERNAL_SERVER_ERROR
+} as const;
+
+export const USER_MESSAGES = {
+  [ERROR_CATEGORIES.VALIDATION]: 'Invalid input provided',
+  [ERROR_CATEGORIES.AUTHENTICATION]: 'Authentication failed',
+  [ERROR_CATEGORIES.DATABASE]: 'Database operation failed',
+  [ERROR_CATEGORIES.DUPLICATE_KEY]: 'This username is already taken. Please choose another one.',
+  [ERROR_CATEGORIES.NETWORK]: 'Network request failed',
+  [ERROR_CATEGORIES.SYSTEM]: 'System error occurred',
+  [ERROR_CATEGORIES.UNKNOWN]: 'An unexpected error occurred'
+} as const;

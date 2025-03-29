@@ -1,0 +1,62 @@
+version: '3.8'
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      # Ensure SSL directories are correctly mounted
+      - /etc/ssl/private:/etc/ssl/private
+      - /etc/ssl/certs:/etc/ssl/certs
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - MONGODB_URI=mongodb://admin:devpassword@mongodb:27017/ai_project_planner?authSource=admin
+    env_file:
+      - .env.development
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    # Ensure the container has necessary privileges to modify SSL directories
+    privileged: true
+    
+  mongodb:
+    container_name: ai-project-planner-mongodb-1
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./.docker/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf:ro
+    environment:
+      - MONGO_INITDB_DATABASE=ai_project_planner
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=devpassword
+    command: mongod --config /etc/mongod.conf --logpath /proc/1/fd/1 --logappend
+    healthcheck:
+      test: mongosh --quiet --eval 'db.runCommand("ping").ok' mongodb://admin:devpassword@localhost:27017/admin
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  app-network:
+    name: app-network
+    driver: bridge

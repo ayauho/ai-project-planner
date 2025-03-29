@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/lib/*": ["src/lib/*"],
+      "@/tests/*": ["tests/*"]
+    }
+  },
+  "include": [
+    ".",
+    "../src/**/*"
+  ]
+}

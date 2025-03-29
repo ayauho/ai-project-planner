@@ -1,0 +1,301 @@
+/* COMPLETE ISOLATION APPROACH
+   This CSS completely isolates the side panel from the main content flow
+   to prevent any transform issues during toggle */
+
+/* Define variables for panel dimensions and animation */
+:root {
+  --side-panel-expanded-width: 256px;
+  --side-panel-collapsed-width: 64px;
+  --side-panel-collapsed-mobile-width: 48px;
+  --header-height: 60px;
+  --panel-transition-duration: 250ms;
+  --panel-transition-timing: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Fixed position side panel - completely removed from normal flow */
+[data-side-panel="true"] {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  bottom: 0;
+  width: var(--side-panel-expanded-width);
+  height: calc(100vh - var(--header-height));
+  z-index: 40; /* Reduced z-index to ensure common controls are visible */
+  background-color: white;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition-property: transform, width, opacity;
+  transition-duration: var(--panel-transition-duration);
+  transition-timing-function: var(--panel-transition-timing);
+  will-change: transform, width, opacity;
+  opacity: 1;
+}
+
+/* Collapsed state */
+[data-side-panel="true"][data-state="collapsed"] {
+  width: var(--side-panel-collapsed-width);
+}
+
+/* Main content positioning with margin based on panel state */
+[data-main-content="true"] {
+  margin-left: var(--side-panel-expanded-width);
+  transition: margin-left var(--panel-transition-duration) var(--panel-transition-timing);
+  will-change: margin-left;
+  position: relative;
+  z-index: 10;
+}
+
+/* Main content margin when panel is collapsed */
+body:has([data-side-panel="true"][data-state="collapsed"]) [data-main-content="true"] {
+  margin-left: var(--side-panel-collapsed-width);
+}
+
+/* Ensure transform-group never transitions during panel toggle */
+.side-panel-transitioning .transform-group,
+body:has([data-side-panel]) .transform-group {
+  transition: none !important;
+}
+
+/* Collapse button positioning */
+[data-side-panel="true"] .panel-collapse-button {
+  position: absolute;
+  top: 5px !important;
+  right: 5px !important;
+  z-index: 100;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  width: 30px !important;
+  height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Center button icons */
+[data-side-panel="true"] .panel-collapse-button button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+/* Project list scrolling must be enabled */
+[data-project-list="true"] {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  height: 100% !important;
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure project-selector has the proper list styles */
+[data-project-list="true"] .project-selector {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Project list items should have good touch targets all the time */
+[data-project-list="true"] [data-project-id] {
+  margin-bottom: 0.25rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+  padding: 0.5rem 1rem !important;
+}
+
+[data-project-list="true"] [data-project-id]:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-project-list="true"] [data-project-id].selected {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+/* Center loading indicator properly */
+.loading-spinner-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+
+/* Prevent side panel animation from affecting other elements */
+.side-panel-transitioning * {
+  animation: none !important;
+}
+
+/* Side panel padding adjustments for ALL screen sizes */
+[data-side-panel="true"] >div.h-full.overflow-hidden.pt-12.px-4.pr-0 {
+  padding-left: 0 !important;
+}
+
+[data-side-panel="true"] div.flex.flex-col.h-full.pl-4.pr-0.pt-12 {
+  padding-left: 0 !important;
+}
+
+[data-side-panel="true"] div.pr-4.flex-shrink-0.mb-0 {
+  padding-left: 1rem !important;
+}
+
+[data-side-panel="true"] div.flex.justify-between.items-center.px-2.mb-2.flex-shrink-0 {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+[data-side-panel="true"] div.space-y-2.py-2.pr-2.pl-0 {
+  padding-right: 0 !important;
+}
+
+[data-side-panel="true"] div.flex-grow.overflow-auto.h-full {
+  padding-left: 0 !important;
+}
+
+/* Mobile adaptations */
+@media (max-width: 768px) {
+  /* Side panel visual adjustments for mobile */
+  [data-side-panel="true"] {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+  
+  /* Collapsed state on mobile - smaller and semi-transparent */
+  [data-side-panel="true"][data-state="collapsed"] {
+    width: var(--side-panel-collapsed-mobile-width);
+    opacity: 0.5;
+  }
+  
+  /* Expanded state on mobile - full opacity */
+  [data-side-panel="true"][data-state="expanded"] {
+    opacity: 1;
+  }
+  
+  /* Main content margin for mobile */
+  [data-main-content="true"] {
+    margin-left: var(--side-panel-collapsed-mobile-width);
+    padding: 3px !important;
+  }
+  
+  /* Content margin when panel is collapsed on mobile */
+  body:has([data-side-panel="true"][data-state="collapsed"]) [data-main-content="true"] {
+    margin-left: var(--side-panel-collapsed-mobile-width);
+  }
+  
+  /* Larger touch targets for project list items */
+  [data-project-list="true"] [data-project-id] {
+    padding: 10px 8px;
+    min-height: 44px;
+  }
+  
+  /* Project list delete button styling for mobile */
+  [data-project-list="true"] [data-project-id] button {
+    opacity: 0.7 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  /* Change delete icon color to grey for mobile */
+  [data-project-list="true"] [data-project-id] button svg {
+    color: #6B7280 !important; /* text-gray-500 equivalent */
+    stroke: #6B7280 !important; /* For SVG stroke-based icons */
+  }
+  
+  /* Project creation form container margin */
+  div.flex.justify-center.items-center.w-full {
+    margin-left: var(--side-panel-collapsed-mobile-width);
+  }
+  
+  /* Project creation form adjustments */
+  .project-creation-form {
+    left: auto !important;
+  }
+  
+  .project-creation-form >button {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .project-creation-form textarea {
+    width: -webkit-fill-available !important;
+  }
+  
+  /* Make sure the side panel is always behind the main content on mobile */
+  [data-side-panel="true"] {
+    z-index: 35; /* Slightly lower than default to ensure proper layering */
+  }
+  
+  /* DO NOT override SVG transform attributes for controls */
+  .task-split-button,
+  .regenerate-control, 
+  .delete-control,
+  .svg-task-control,
+  g[class*="task-control"],
+  [data-control-type="split"],
+  [data-control-type="regenerate"],
+  [data-control-type="delete"] {
+    /* Preserve original transform and increase visibility */
+    transform-origin: center center !important;
+    z-index: 1000 !important;
+  }
+}
+
+/* Mobile view applied by device detection logic */
+body[data-mobile-view="true"] [data-side-panel="true"][data-state="collapsed"] {
+  width: var(--side-panel-collapsed-mobile-width);
+  opacity: 0.5;
+}
+
+body[data-mobile-view="true"] [data-side-panel="true"][data-state="expanded"] {
+  opacity: 1;
+}
+
+body[data-mobile-view="true"] [data-main-content="true"] {
+  margin-left: var(--side-panel-collapsed-mobile-width);
+  padding: 3px !important;
+}
+
+/* Enhanced touch interface for all potential touch devices regardless of screen size */
+@media (pointer: coarse) {
+  /* Make all interactive elements have adequate touch targets */
+  button, 
+  [role="button"],
+  .clickable,
+  [data-side-panel="true"] .panel-collapse-button,
+  .project-creation-form button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Enhance hover effect visibility for touch devices */
+  [data-project-list="true"] [data-project-id]:active {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Remove hover effects that might make touch interactions feel laggy */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Fallback for browsers that don't support :has() */
+@media (max-width: 1200px) {
+  [data-main-content="true"] {
+    margin-left: var(--side-panel-collapsed-width);
+  }
+  
+  [data-side-panel="true"][data-state="expanded"] + [data-main-content="true"] {
+    margin-left: var(--side-panel-expanded-width);
+  }
+}

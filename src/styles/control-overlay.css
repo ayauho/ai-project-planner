@@ -1,0 +1,149 @@
+/* Control overlay styles with improved visibility */
+.controls-overlay-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  pointer-events: none !important;
+  z-index: 3000 !important; /* Extremely high z-index */
+  overflow: visible !important;
+}
+/* Task overlay control */
+.task-overlay-control {
+  position: absolute !important;
+  width: 50px !important;
+  height: 50px !important;
+  margin-left: -25px !important;
+  margin-top: -25px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  opacity: 1 !important;
+  visibility: visible !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  transform-origin: center center;
+  /* Add debug border to make controls more visible */
+  border-width: 3px !important;
+  /* Disable tap highlight color on mobile */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Increased size for mobile */
+@media (max-width: 768px) {
+  .task-overlay-control {
+    width: 60px !important;
+    height: 60px !important;
+    margin-left: -30px !important;
+    margin-top: -30px !important;
+  }
+}
+
+/* Make inner elements non-interactive to prevent click issues */
+.task-overlay-control * {
+  pointer-events: none !important;
+}
+
+.task-overlay-control:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.task-overlay-control:active {
+  transform: scale(0.95) !important;
+}
+
+.regenerate-control {
+  background-color: #3b82f6 !important;
+  border: 3px solid #2563eb !important;
+}
+
+.delete-control {
+  background-color: #ef4444 !important;
+  border: 3px solid #dc2626 !important;
+}
+
+.task-overlay-control svg {
+  width: 24px !important;
+  height: 24px !important;
+  stroke: white !important;
+  stroke-width: 2 !important;
+  fill: none !important;
+}
+
+.task-overlay-control.loading {
+  position: relative !important;
+}
+
+.task-overlay-control.loading svg {
+  opacity: 0 !important;
+}
+
+.task-overlay-control.loading::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add indication when controls are active */
+body.mode-regenerate .task-split-button,
+body.mode-delete .task-split-button {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Ensure overlay controls don't get hidden by z-index issues */
+.regenerate-control,
+.delete-control {
+  z-index: 3001 !important;
+}
+
+/* Use more distinct visual indicators for active mode buttons */
+.common-controls-container button.regenerate-active {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.common-controls-container button.delete-active {
+  background-color: #ef4444 !important;
+  color: white !important;
+}
+
+/* Add indicator for active mode in the UI */
+body.mode-regenerate .regenerate-control,
+body.mode-delete .delete-control {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
