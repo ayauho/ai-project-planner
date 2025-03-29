@@ -148,6 +148,11 @@ class Logger {
    * @param keywords Array of keywords to check against rules
    */
   private shouldShowLog(keywords: string[]): boolean {
+    // Highest priority rule: If SHOW_BACKEND_LOGS is true, always show logs
+    if (process.env.SHOW_BACKEND_LOGS === 'true') {
+      return true;
+    }
+    
     // Check environment - only show logs in development
     if (process.env.NODE_ENV && process.env.NODE_ENV !== 'development') {
       return false;
