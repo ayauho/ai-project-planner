@@ -221,7 +221,7 @@ class ClientLogger {
       }
       
       return 'unknown';
-    } catch (e) {
+    } catch {
       return 'unknown';
     }
   }

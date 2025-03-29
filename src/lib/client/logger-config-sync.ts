@@ -2,6 +2,8 @@
  * Utility for syncing logger configuration between server and client
  */
 
+import { LoggerConfigFile } from './logger';
+
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
@@ -15,7 +17,7 @@ const isDevelopment = (): boolean => {
 /**
  * Fetch logger config from server
  */
-const fetchConfigFromServer = async (): Promise<any> => {
+const fetchConfigFromServer = async (): Promise<LoggerConfigFile | null> => {
   if (!isBrowser) return null;
   
   try {
@@ -39,7 +41,7 @@ const safeLocalStorage = {
     if (!isBrowser) return false;
     try {
       return localStorage.getItem(key) !== null;
-    } catch (e) {
+    } catch {
       return false;
     }
   },
@@ -83,7 +85,7 @@ export const syncLoggerConfig = async (): Promise<void> => {
 };
 
 // For client-side updates to logger config that need to be persisted
-export const updateLoggerConfig = async (config: any): Promise<boolean> => {
+export const updateLoggerConfig = async (config: LoggerConfigFile): Promise<boolean> => {
   // Skip in SSR
   if (!isBrowser) return false;
   
