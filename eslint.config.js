@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactPlugin from "eslint-plugin-react";
 import unusedImports from "eslint-plugin-unused-imports";
+import nextPlugin from "@next/eslint-plugin-next";
 
 export default [
   js.configs.recommended,
@@ -10,7 +11,8 @@ export default [
     files: ["**/*.{ts,tsx}"],
     plugins: {
       react: reactPlugin,
-      "unused-imports": unusedImports
+      "unused-imports": unusedImports,
+      next: nextPlugin
     },
     rules: {
       "no-unused-vars": "off",
@@ -23,5 +25,7 @@ export default [
       "react/jsx-uses-react": "error",
       "react/jsx-uses-vars": "error"
     }
-  }
+  },
+  // Add Next.js specific configuration
+  nextPlugin.configs.recommended
 ];
