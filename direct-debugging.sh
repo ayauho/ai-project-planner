@@ -18,7 +18,7 @@ echo -e "\n3. Attempting to connect to MongoDB with direct connection:"
 docker exec -i ai-project-planner-mongodb-1 mongosh admin --quiet --eval "db.runCommand('ping').ok"
 
 # 4. Create a direct test script to run in the app container
-cat > /var/www/ai-project-planner/direct-test.js << 'EOL'
+cat > /var/www/ai-project-planner/direct-test.cjs << 'EOL'
 // Direct test script - stripped down to basics
 const { MongoClient } = require('mongodb');
 
@@ -94,8 +94,8 @@ EOL
 
 # 5. Run the test script in the app container
 echo -e "\n4. Running direct test script in app container:"
-docker cp /var/www/ai-project-planner/direct-test.js ai-project-planner-app-1:/app/direct-test.js
-docker exec -i ai-project-planner-app-1 node /app/direct-test.js
+docker cp /var/www/ai-project-planner/direct-test.cjs ai-project-planner-app-1:/app/direct-test.cjs
+docker exec -i ai-project-planner-app-1 node /app/direct-test.cjs
 
 # 6. Create a script to reset MongoDB password to something simple
 cat > /var/www/ai-project-planner/reset-mongo-password.sh << 'EOL'
@@ -107,7 +107,7 @@ echo "===== MongoDB Password Reset ====="
 NEW_PASSWORD="adminpassword123"
 
 # Create a JavaScript file to reset the admin password
-cat > /tmp/reset-password.js << EOF
+cat > /tmp/reset-password.cjs << EOF
 db = db.getSiblingDB('admin');
 db.changeUserPassword('admin', '$NEW_PASSWORD');
 EOF
@@ -121,7 +121,7 @@ echo "Updating .env file with new password..."
 sed -i "s/MONGO_PASSWORD=.*/MONGO_PASSWORD=$NEW_PASSWORD/" /var/www/ai-project-planner/.env
 
 # Create a test file to verify the new password works
-cat > /tmp/test-new-password.js << EOF
+cat > /tmp/test-new-password.cjs << EOF
 db = db.getSiblingDB('admin');
 db.runCommand({ ping: 1 });
 EOF
