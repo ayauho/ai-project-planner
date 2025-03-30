@@ -748,15 +748,6 @@ g[class*="task-control"],
     align-items: center !important;
     justify-content: center !important;
   }
-  
-  /* Ensure side panel opacity transitions work properly */
-  [data-side-panel="true"][data-state="collapsed"] {
-    opacity: 0.5 !important;
-  }
-  
-  [data-side-panel="true"][data-state="expanded"] {
-    opacity: 1 !important;
-  }
 }
 
 /* Mobile view applied by data attribute */

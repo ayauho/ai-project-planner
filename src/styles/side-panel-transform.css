@@ -5,8 +5,8 @@
 /* Define variables for panel dimensions and animation */
 :root {
   --side-panel-expanded-width: 256px;
-  --side-panel-collapsed-width: 64px;
-  --side-panel-collapsed-mobile-width: 48px;
+  --side-panel-collapsed-width: 42px;
+  --side-panel-collapsed-mobile-width: 42px;
   --header-height: 60px;
   --panel-transition-duration: 250ms;
   --panel-transition-timing: cubic-bezier(0.4, 0.0, 0.2, 1);
@@ -35,11 +35,17 @@
 /* Collapsed state */
 [data-side-panel="true"][data-state="collapsed"] {
   width: var(--side-panel-collapsed-width);
+  opacity: 0.5 !important;
+}
+
+/* Ensure side panel opacity transitions work properly */
+[data-side-panel="true"][data-state="expanded"] {
+  opacity: 1 !important;
 }
 
 /* Main content positioning with margin based on panel state */
 [data-main-content="true"] {
-  margin-left: var(--side-panel-expanded-width);
+  margin-left: 0; /*var(--side-panel-expanded-width);*/
   transition: margin-left var(--panel-transition-duration) var(--panel-transition-timing);
   will-change: margin-left;
   position: relative;
@@ -48,7 +54,7 @@
 
 /* Main content margin when panel is collapsed */
 body:has([data-side-panel="true"][data-state="collapsed"]) [data-main-content="true"] {
-  margin-left: var(--side-panel-collapsed-width);
+  margin-left: 0; /*var(--side-panel-collapsed-width);*/
 }
 
 /* Ensure transform-group never transitions during panel toggle */
@@ -272,7 +278,7 @@ body[data-mobile-view="true"] [data-main-content="true"] {
   button, 
   [role="button"],
   .clickable,
-  [data-side-panel="true"] .panel-collapse-button,
+  /*[data-side-panel="true"] .panel-collapse-button,*/
   .project-creation-form button {
     min-height: 44px;
     min-width: 44px;
