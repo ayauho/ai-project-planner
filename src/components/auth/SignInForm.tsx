@@ -49,7 +49,7 @@ export default function SignInForm({ onSubmit }: SignInFormProps) {
             type="email"
             autoComplete="email"
             required
-            className="form-input-base"
+            className="form-input-base text-gray-900"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             disabled={isLoading}
@@ -79,7 +79,7 @@ export default function SignInForm({ onSubmit }: SignInFormProps) {
       <div>
         <button
           type="submit"
-          className="btn-primary"
+          className="btn-primary text-white"
           disabled={isLoading}
         >
           {isLoading ? 'Signing in...' : 'Sign in'}

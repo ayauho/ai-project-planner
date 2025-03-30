@@ -66,7 +66,7 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
             type="text"
             autoComplete="nickname"
             required
-            className={`form-input-base ${getFieldError('nickname') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 ${getFieldError('nickname') ? 'border-red-300' : ''}`}
             value={formData.nickname}
             onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
             disabled={isLoading}
@@ -88,7 +88,7 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
             type="email"
             autoComplete="email"
             required
-            className={`form-input-base ${getFieldError('email') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 ${getFieldError('email') ? 'border-red-300' : ''}`}
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             disabled={isLoading}
@@ -110,7 +110,7 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
             type="password"
             autoComplete="new-password"
             required
-            className={`form-input-base ${getFieldError('password') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 ${getFieldError('password') ? 'border-red-300' : ''}`}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             disabled={isLoading}
@@ -124,7 +124,7 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
       <div>
         <button
           type="submit"
-          className="btn-primary"
+          className="btn-primary text-white"
           disabled={isLoading}
         >
           {isLoading ? 'Signing up...' : 'Sign up'}

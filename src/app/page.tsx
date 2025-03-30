@@ -32,22 +32,7 @@ export default function Home() {
         <div className="text-xl">Loading...</div>
       </main>
     );
-  }
-
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold mb-4">
-        Welcome to AI Project Planner
-      </h1>
-      <p className="text-xl text-gray-600 mb-8">
-        Start planning your projects with AI assistance
-      </p>
-      <Link
+  }  return (<main className="flex min-h-screen flex-col items-center justify-center p-24 bg-white"><h1 className="text-4xl font-bold mb-4 text-gray-900">Welcome to AI Project Planner</h1><p className="text-xl text-gray-600 mb-8">Start planning your projects with AI assistance</p><Link
         href="/auth"
         className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-      >
-        Get Started
-      </Link>
-    </main>
-  );
-}
+      >Get Started</Link></main>);}

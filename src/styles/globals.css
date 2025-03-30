@@ -40,6 +40,15 @@
   }
 }
 
+/* Force light theme on small screens regardless of user preference */
+@media (max-width: 768px) {
+  :root {
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 255, 255, 255;
+    --background-end-rgb: 255, 255, 255;
+  }
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
