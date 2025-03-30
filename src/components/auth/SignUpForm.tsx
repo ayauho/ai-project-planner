@@ -9,7 +9,7 @@ interface ValidationError {
 }
 
 interface SignUpFormProps {
-  onSubmit: (data: SignUpInput) => Promise<void>;
+  onSubmit: (data: SignUpInput) =>Promise<void>;
 }
 
 export default function SignUpForm({ onSubmit }: SignUpFormProps) {
@@ -22,7 +22,7 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) =>{
     e.preventDefault();
     setErrors([]);
     setIsLoading(true);
@@ -43,93 +43,42 @@ export default function SignUpForm({ onSubmit }: SignUpFormProps) {
     }
   };
 
-  const getFieldError = (field: string) => 
-    errors.find(error => error.field === field)?.message;
+  const getFieldError = (field: string) =>errors.find(error =>error.field === field)?.message;
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* General form error */}
-      {getFieldError('form') && (
-        <div className="rounded-md bg-red-50 p-4">
-          <div className="text-sm text-red-700">{getFieldError('form')}</div>
-        </div>
-      )}
-
-      <div>
-        <label htmlFor="nickname" className="block text-sm font-medium leading-6 text-gray-900">
-          Nickname
-        </label>
-        <div className="mt-2">
-          <input
+  return (<form onSubmit={handleSubmit} className="space-y-6 w-full">{/* General form error */}
+      {getFieldError('form') && (<div className="rounded-md bg-red-50 p-4"><div className="text-sm text-red-700">{getFieldError('form')}</div></div>)}<div><label htmlFor="nickname" className="block text-sm font-medium leading-6 text-gray-900">Nickname</label><div className="mt-2"><input
             id="nickname"
             name="nickname"
             type="text"
             autoComplete="nickname"
             required
-            className={`form-input-base text-gray-900 ${getFieldError('nickname') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 w-full px-3 py-2 border rounded-md ${getFieldError('nickname') ? 'border-red-300' : 'border-gray-300'}`}
             value={formData.nickname}
-            onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+            onChange={(e) =>setFormData({ ...formData, nickname: e.target.value })}
             disabled={isLoading}
-          />
-          {getFieldError('nickname') && (
-            <p className="mt-2 text-sm text-red-600">{getFieldError('nickname')}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-          Email
-        </label>
-        <div className="mt-2">
-          <input
+          />{getFieldError('nickname') && (<p className="mt-2 text-sm text-red-600">{getFieldError('nickname')}</p>)}</div></div><div><label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">Email</label><div className="mt-2"><input
             id="email"
             name="email"
             type="email"
             autoComplete="email"
             required
-            className={`form-input-base text-gray-900 ${getFieldError('email') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 w-full px-3 py-2 border rounded-md ${getFieldError('email') ? 'border-red-300' : 'border-gray-300'}`}
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) =>setFormData({ ...formData, email: e.target.value })}
             disabled={isLoading}
-          />
-          {getFieldError('email') && (
-            <p className="mt-2 text-sm text-red-600">{getFieldError('email')}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
-          Password
-        </label>
-        <div className="mt-2">
-          <input
+          />{getFieldError('email') && (<p className="mt-2 text-sm text-red-600">{getFieldError('email')}</p>)}</div></div><div><label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">Password</label><div className="mt-2"><input
             id="password"
             name="password"
             type="password"
             autoComplete="new-password"
             required
-            className={`form-input-base text-gray-900 ${getFieldError('password') ? 'border-red-300' : ''}`}
+            className={`form-input-base text-gray-900 w-full px-3 py-2 border rounded-md ${getFieldError('password') ? 'border-red-300' : 'border-gray-300'}`}
             value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            onChange={(e) =>setFormData({ ...formData, password: e.target.value })}
             disabled={isLoading}
-          />
-          {getFieldError('password') && (
-            <p className="mt-2 text-sm text-red-600">{getFieldError('password')}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <button
+          />{getFieldError('password') && (<p className="mt-2 text-sm text-red-600">{getFieldError('password')}</p>)}</div></div><div className="mt-6"><button
           type="submit"
-          className="btn-primary text-white"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md"
           disabled={isLoading}
-        >
-          {isLoading ? 'Signing up...' : 'Sign up'}
-        </button>
-      </div>
-    </form>
-  );
+        >{isLoading ? 'Signing up...' : 'Sign up'}</button></div></form>);
 }

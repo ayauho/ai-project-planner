@@ -32,20 +32,22 @@
   --side-panel-width: 42px;
 }
 
+/* Override dark mode to force light mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 10, 10, 10;
-    --background-end-rgb: 0, 0, 0;
+    --foreground-rgb: 0, 0, 0 !important;
+    --background-start-rgb: 255, 255, 255 !important;
+    --background-end-rgb: 255, 255, 255 !important;
   }
-}
 
-/* Force light theme on small screens regardless of user preference */
-@media (max-width: 768px) {
-  :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 255, 255, 255;
-    --background-end-rgb: 255, 255, 255;
+  html, 
+  body, 
+  main, 
+  #__next, 
+  #__next > div, 
+  .min-h-screen {
+    background-color: white !important;
+    color: #111827 !important;
   }
 }
 
@@ -124,7 +126,7 @@ g.project-counter,
 }
 
 /* Targeted hide for new projects - only hide SVG workspace-related elements */
-.hide-project-rendering svg > g,
+.hide-project-rendering svg >g,
 .hide-project-rendering svg .transform-group,
 .hide-project-rendering .task-rect,
 .hide-project-rendering .project-rect,
@@ -178,7 +180,7 @@ g.project-counter,
 }
 
 /* Show workspace content when ready */
-.show-project-rendering svg > g,
+.show-project-rendering svg >g,
 .show-project-rendering svg .transform-group,
 .show-project-rendering .task-rect,
 .show-project-rendering .project-rect,
@@ -335,7 +337,7 @@ body .project-group[data-state="hidden"] .embedded-counter {
 }
 
 /* Hide elements until properly centered after project creation */
-.hide-elements-until-centered svg > g,
+.hide-elements-until-centered svg >g,
 .hide-elements-until-centered svg .transform-group,
 .hide-elements-until-centered .task-rect,
 .hide-elements-until-centered .project-rect,
@@ -571,6 +573,7 @@ g[class*="task-control"],
     width: 100% !important;
     height: 100% !important;
     overflow: visible !important;
+    pointer-events: all !important;
   }
   
   /* Ensure controls maintain their position relative to parent */
@@ -846,4 +849,46 @@ html body [id*="common-controls"] {
   z-index: 9999 !important;
   position: fixed !important;
   pointer-events: auto !important;
+}
+
+/* CRITICAL: Auth styles overrides - highest specificity */
+html body form button[type="submit"],
+html body button.btn-primary,
+html body .btn-primary,
+html body [class*="blue-600"],
+html body a[href="/auth"],
+html body a.bg-blue-600 {
+  color: white !important;
+  background-color: #2563eb !important;
+  font-weight: 500 !important;
+  font-size: 1rem !important;
+  border-color: #2563eb !important;
+  text-align: center !important;
+}
+
+html body .auth-container,
+html body .min-h-screen,
+html body main,
+html body form,
+html body [class*="bg-gray-50"] {
+  background-color: white !important;
+}
+
+html body input,
+html body textarea,
+html body select,
+html body .form-input-base {
+  color: #111827 !important; /* text-gray-900 equivalent */
+}
+
+/* Force white background on all pages and auth component */
+html, 
+body, 
+main, 
+#__next, 
+#__next > div, 
+.min-h-screen,
+[class*="bg-gray"] {
+  background-color: white !important;
+  color: #111827 !important;
 }
