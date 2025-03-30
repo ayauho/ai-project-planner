@@ -37,7 +37,7 @@ export async function initializeDatabase() {
 
   try {
     logger.info('Initializing database connection', {
-      uri: config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'),
+      uri: config.uri/*.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')*/,
     }, 'database initialization');
 
     mongoose.set('strictQuery', true);
