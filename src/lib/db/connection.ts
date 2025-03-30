@@ -40,17 +40,37 @@ class DatabaseConnectionManager implements ConnectionManager {
       throw new Error('Connection attempt already in progress');
     }
 
-    this.connecting = true;
-
-    try {
+    this.connecting = true;    try {
+      // Log connection details securely (with masked password)
       logger.info('Attempting to connect to MongoDB', {
         uri: this.config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'),
         attempt: this.retryCount + 1
       }, 'database connection-management');
-
-      const _connection = await initializeDatabase();
       
-      // Reset counters on successful connection
+      // For debugging - detailed connection info
+      const parsedUri = new URL(this.config.uri);
+      logger.debug('Connection details (debugging)', {
+        protocol: parsedUri.protocol,
+        username: parsedUri.username,
+        passwordLength: parsedUri.password?.length,
+        hostname: parsedUri.hostname,
+        port: parsedUri.port,
+        pathname: parsedUri.pathname,
+        searchParams: Object.fromEntries(parsedUri.searchParams),
+        fullOptions: this.config.options
+      }, 'database connection-debug');
+      
+      // Create a test connection using URL constructor to simulate what mongoose does
+      try {
+        const testUri = `${parsedUri.protocol}//${encodeURIComponent(parsedUri.username)}:${encodeURIComponent(parsedUri.password)}@${parsedUri.host}${parsedUri.pathname}${parsedUri.search}`;
+        logger.debug('Re-encoded URI', {
+          reEncodedUri: testUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+        }, 'database connection-debug');
+      } catch (parseError) {
+        logger.error('Error parsing connection URI', { parseError }, 'database connection-error');
+      }
+      
+      const _connection = await initializeDatabase();// Reset counters on successful connection
       this.retryCount = 0;
       this.backoffDelay = 1000;
       
