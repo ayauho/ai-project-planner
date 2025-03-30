@@ -2,90 +2,73 @@ import mongoose from 'mongoose';
 import { getDatabaseConfig } from './config';
 import logger from '@/lib/logger';
 
-// Interface for MongoDB errors to improve type safety
-interface MongoDBError extends Error {
-  code?: string | number;
-  codeName?: string;
-}
-
-// Type guard to check if an error is a MongoDB error
-function isMongoDBError(error: unknown): error is MongoDBError {
-  return error instanceof Error && 
-    ('code' in error || 'codeName' in error);
-}
-
-// Helper to safely extract error properties
-function extractErrorDetails(error: unknown): Record<string, unknown> {
-  if (isMongoDBError(error)) {
-    return {
-      errorName: error.name,
-      errorMessage: error.message,
-      errorCode: error.code,
-      errorCodeName: error.codeName
-    };
-  } else if (error instanceof Error) {
-    return {
-      errorName: error.name,
-      errorMessage: error.message
-    };
-  }
-  return { errorType: typeof error };
-}
-
-export async function initializeDatabase() {
+/**
+ * Initialize the database connection
+ */
+export const initializeDatabase = async (): Promise<typeof mongoose> => {
   const config = getDatabaseConfig();
-
+  
   try {
-    logger.info('Initializing database connection', {
-      uri: config.uri/*.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')*/,
-    }, 'database initialization');
-
-    mongoose.set('strictQuery', true);
-
     mongoose.connection.on('connected', () => {
-      logger.info('MongoDB connected successfully', {}, 'database initialization connection');
+      logger.info('DBLOG_MARKER: MongoDB connected', {}, 'database initialization');
     });
-
-    mongoose.connection.on('error', (error) => {
-      const errorDetails = extractErrorDetails(error);
-      logger.error('MongoDB connection error', { 
-        error,
-        ...errorDetails
-      }, 'database initialization error');
-    });
-
+    
     mongoose.connection.on('disconnected', () => {
-      logger.info('MongoDB disconnected', {}, 'database initialization disconnect');
+      logger.info('DBLOG_MARKER: MongoDB disconnected', {}, 'database initialization');
     });
-
-    // Connect using mongoose types
-    await mongoose.connect(config.uri, config.options);
-
-    // Test connection with detailed error handling
-    const conn = mongoose.connection;
+    
+    mongoose.connection.on('error', (err) => {
+      logger.error('DBLOG_MARKER: MongoDB connection error', { error: err }, 'database initialization');
+    });
+    
+    // Special debug logging to track the exact connection details
+    console.log('DBLOG_CONSOLE: About to connect with URI:', config.uri);
+    
+    // Log the exact connection string being used (for debugging only)
+    logger.info('DBLOG_MARKER: EXACT CONNECTION STRING', {
+      exactUri: config.uri,
+      uriType: typeof config.uri,
+      defaultUri: 'mongodb://admin:devpassword@mongodb:27017/ai_project_planner?authSource=admin'
+    }, 'database-debug');
+    
+    // Try directly encoding the password
     try {
-      await conn.db.admin().ping();
-      logger.info('Database ping successful', {}, 'database initialization ping');
-    } catch (pingError) {
-      const errorDetails = extractErrorDetails(pingError);
-      logger.error('Database ping failed', { 
-        error: pingError,
-        dbName: conn.db.databaseName,
-        readyState: conn.readyState,
-        ...errorDetails
-      }, 'database initialization ping-error');
-      throw pingError;
+      // Parse the URI to get components
+      const parsedUri = new URL(config.uri);
+      const username = parsedUri.username;
+      const password = parsedUri.password;
+      const host = parsedUri.host;
+      const path = parsedUri.pathname;
+      const search = parsedUri.search;
+      
+      // Create a properly encoded URI
+      const properlyEncodedUri = `${parsedUri.protocol}//${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}${path}${search}`;
+      
+      // Log both URIs for comparison (without masking)
+      logger.info('DBLOG_MARKER: CONNECTION COMPARISON', {
+        original: config.uri,
+        encoded: properlyEncodedUri
+      }, 'database-debug');
+      
+      // Connect with the properly encoded URI
+      console.log('DBLOG_CONSOLE: Connecting with encoded URI');
+      await mongoose.connect(properlyEncodedUri, config.options);
+    } catch (encodeError) {
+      // If encoding fails, try the original
+      logger.error('DBLOG_MARKER: Encoding failed, using original', { encodeError }, 'database-debug');
+      console.log('DBLOG_CONSOLE: Encoding failed, using original URI');
+      await mongoose.connect(config.uri, config.options);
     }
-
-    logger.info('Database initialized successfully', {}, 'database initialization');
-
-    return conn;
+    
+    return mongoose;
   } catch (error) {
-    const errorDetails = extractErrorDetails(error);
-    logger.error('Failed to initialize database', { 
-      error,
-      ...errorDetails
-    }, 'database initialization error');
+    console.error('DBLOG_CONSOLE: Database connection failed:', error);
+    logger.error('DBLOG_MARKER: Failed to initialize database', { 
+      error, 
+      errorDetails: JSON.stringify(error),
+      errorMessage: error.message,
+      errorStack: error.stack
+    }, 'database initialization');
     throw error;
   }
-}
+};
