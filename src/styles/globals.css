@@ -1,7 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* Import statements must come before all other statements */
 @import './control-overlay.css';
 @import './control-modes.css';
 @import './state-restoration.css';
@@ -14,6 +11,12 @@
 @import './side-panel-transform.css';
 @import './transform-stabilization.css';
 @import './common-controls.css';
+@import './no-nested-css.css';
+
+/* Tailwind directives come after imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -26,7 +29,7 @@
   --saved-transform-scale: 0.3;
   
   /* Side panel width for centering calculations */
-  --side-panel-width: 0px;
+  --side-panel-width: 42px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -112,7 +115,7 @@ g.project-counter,
 }
 
 /* Targeted hide for new projects - only hide SVG workspace-related elements */
-.hide-project-rendering svg >g,
+.hide-project-rendering svg > g,
 .hide-project-rendering svg .transform-group,
 .hide-project-rendering .task-rect,
 .hide-project-rendering .project-rect,
@@ -166,7 +169,7 @@ g.project-counter,
 }
 
 /* Show workspace content when ready */
-.show-project-rendering svg >g,
+.show-project-rendering svg > g,
 .show-project-rendering svg .transform-group,
 .show-project-rendering .task-rect,
 .show-project-rendering .project-rect,
@@ -323,7 +326,7 @@ body .project-group[data-state="hidden"] .embedded-counter {
 }
 
 /* Hide elements until properly centered after project creation */
-.hide-elements-until-centered svg >g,
+.hide-elements-until-centered svg > g,
 .hide-elements-until-centered svg .transform-group,
 .hide-elements-until-centered .task-rect,
 .hide-elements-until-centered .project-rect,
@@ -676,78 +679,6 @@ g[class*="task-control"],
     /* Make sure overlay controls stay in position */
     transform: translate(-50%, -50%) scale(1.2) !important;
   }
-  
-  /* Improved common controls positioning */
-  .common-controls-container {
-    right: 0 !important;
-    top: 60px !important; /* Position right below the header */
-    padding: 0.2rem !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-left-radius: 0.5rem !important;
-    background-color: white;
-  }
-  
-  .common-controls-container >button {
-    border-top-right-radius: 0 !important;
-    border-top-left-radius: 0 !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-  }
-  
-  .common-controls-container[data-expanded="false"] >button {
-    border-bottom-right-radius: 0 !important;
-  }
-  
-  .common-controls-container[data-expanded="true"] >button {
-    border-bottom-right-radius: 9999px !important;
-  }
-  
-  #common-controls-panel {
-    right: 0 !important;
-    margin-top: 0 !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-  }
-  
-  #common-controls-panel >button {
-    padding: 0.2rem !important;
-  }
-  
-  .common-controls-container svg,
-  #common-controls-panel svg {
-    margin: auto !important;
-  }
-  
-  /* API key window adjustments */
-  .DialogContent {
-    width: auto !important;
-    max-width: 92vw !important;
-  }
-  
-  /* Main content area */
-  main {
-    margin-left: 0 !important;
-    padding: 3px !important;
-  }
-  
-  /* Prevent main content from being too close to the edge */
-  [data-main-content="true"] {
-    padding: 3px !important;
-  }
-  
-  /* Fix positioning of collapse button for better touchability */
-  .panel-collapse-button {
-    width: 30px !important;
-    height: 30px !important;
-    top: 5px !important;
-    right: 5px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
 }
 
 /* Mobile view applied by data attribute */
@@ -862,78 +793,6 @@ g[class*="task-control"],
     transform: translate(-50%, -50%) scale(1.2) !important;
   }
   
-  /* Improved common controls positioning */
-  .common-controls-container {
-    right: 0 !important;
-    top: 60px !important; /* Position right below the header */
-    padding: 0.2rem !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-left-radius: 0.5rem !important;
-    background-color: white;
-  }
-  
-  .common-controls-container >button {
-    border-top-right-radius: 0 !important;
-    border-top-left-radius: 0 !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-  }
-  
-  .common-controls-container[data-expanded="false"] >button {
-    border-bottom-right-radius: 0 !important;
-  }
-  
-  .common-controls-container[data-expanded="true"] >button {
-    border-bottom-right-radius: 9999px !important;
-  }
-  
-  #common-controls-panel {
-    right: 0 !important;
-    margin-top: 0 !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
-  }
-  
-  #common-controls-panel >button {
-    padding: 0.2rem !important;
-  }
-  
-  .common-controls-container svg,
-  #common-controls-panel svg {
-    margin: auto !important;
-  }
-  
-  /* API key window adjustments */
-  .DialogContent {
-    width: auto !important;
-    max-width: 92vw !important;
-  }
-  
-  /* Main content area */
-  main {
-    margin-left: 0 !important;
-    padding: 3px !important;
-  }
-  
-  /* Prevent main content from being too close to the edge */
-  [data-main-content="true"] {
-    padding: 3px !important;
-  }
-  
-  /* Fix positioning of collapse button for better touchability */
-  .panel-collapse-button {
-    width: 30px !important;
-    height: 30px !important;
-    top: 5px !important;
-    right: 5px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  }
-  
   /* Ensure side panel opacity transitions work properly */
   [data-side-panel="true"][data-state="collapsed"] {
     opacity: 0.5 !important;
@@ -960,7 +819,8 @@ g[class*="task-control"],
 .transform-group,
 .common-controls-container,
 .common-controls-group,
-.common-controls-panel {
+.common-controls-panel,
+.workspace-always-visible {
   visibility: visible !important;
   opacity: 1 !important;
   display: block !important;

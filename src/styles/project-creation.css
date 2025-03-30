@@ -22,7 +22,7 @@
 }
 
 /* Show workspace content when ready */
-.show-project-rendering svg > g,
+.show-project-rendering svg >g,
 .show-project-rendering svg .transform-group,
 .show-project-rendering .task-rect,
 .show-project-rendering .project-rect,
@@ -124,6 +124,8 @@ html body.zoom-pan-ready:not(.transform-locked-strict) .transform-group {
   max-width: 42rem;
   margin: 0 auto;
   transition: width 0.3s ease-out;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .project-creation-form textarea {
@@ -167,6 +169,13 @@ html body.zoom-pan-ready:not(.transform-locked-strict) .transform-group {
     padding-left: 2rem;
     align-items: flex-start !important;
     margin-top: 2rem;
+    margin-left: 256px; /* Match expanded panel width */
+  }
+  
+  /* Adjust container when side panel is collapsed */
+  body:has([data-side-panel="true"][data-state="collapsed"]) div.flex.justify-center.items-center.w-full {
+    margin-left: 42px; /* Match collapsed panel width */
+    transition: margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
   
   /* Adjust form margins for left alignment */
@@ -190,7 +199,7 @@ html body.zoom-pan-ready:not(.transform-locked-strict) .transform-group {
 
 /* Auto-hide side panel when creating project */
 body.creating-project [data-side-panel="true"] {
-  width: var(--side-panel-collapsed-width);
+  width: 42px !important; /* Fixed collapsed width */
   opacity: 0.5;
 }
 
@@ -207,29 +216,33 @@ body.creating-project [data-side-panel="true"] {
 @media (max-width: 768px) {
   /* Fix centering when side panel is collapsed */
   .project-creation-form {
-    width: calc(100% - var(--side-panel-collapsed-mobile-width, 48px));
+    width: calc(100% - 42px);
+    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
   
   /* Center the project creation form */
   div.flex.justify-center.items-center.w-full {
-    margin-left: var(--side-panel-collapsed-mobile-width);
+    margin-left: 42px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
   
   /* Auto-hide side panel when creating project (mobile version) */
   body.creating-project [data-side-panel="true"] {
-    width: var(--side-panel-collapsed-mobile-width);
+    width: 42px !important;
   }
 }
 
 /* Mobile view detected by JS */
 body[data-mobile-view="true"] .project-creation-form {
-  width: calc(100% - var(--side-panel-collapsed-mobile-width, 48px));
+  width: calc(100% - 42px);
+  transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 body[data-mobile-view="true"] div.flex.justify-center.items-center.w-full {
-  margin-left: var(--side-panel-collapsed-mobile-width);
+  margin-left: 42px;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
 body[data-mobile-view="true"] body.creating-project [data-side-panel="true"] {
-  width: var(--side-panel-collapsed-mobile-width);
+  width: 42px !important;
 }

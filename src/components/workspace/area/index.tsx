@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { workspaceStateManager } from '@/lib/workspace/state/manager';
 import { WorkspaceState } from '@/lib/workspace/state/types';
 import ProjectCreation from './project-creation';
@@ -14,6 +14,38 @@ import type { ProjectWithTaskCount } from '@/lib/project/types';
 const WorkspaceArea = () => {
   const [state, setState] = useState<WorkspaceState>(workspaceStateManager.getState());
   const [error, setError] = useState<string | null>(null);
+  const [sidePanelState, setSidePanelState] = useState<'expanded' | 'collapsed'>('collapsed');
+  const initialRenderRef = useRef(true);
+
+  useEffect(() => {
+    // Check for side panel state on mount
+    const checkSidePanelState = () => {
+      const panel = document.querySelector('[data-side-panel="true"]');
+      if (panel) {
+        const isExpanded = panel.getAttribute('data-state') === 'expanded';
+        setSidePanelState(isExpanded ? 'expanded' : 'collapsed');
+      }
+    };
+    
+    // Initial check
+    if (initialRenderRef.current) {
+      checkSidePanelState();
+      initialRenderRef.current = false;
+    }
+    
+    // Listen for side panel changes
+    const handleSidePanelChange = () => {
+      checkSidePanelState();
+    };
+    
+    window.addEventListener('side-panel-state-change', handleSidePanelChange);
+    window.addEventListener('side-panel-toggle-complete', handleSidePanelChange);
+    
+    return () => {
+      window.removeEventListener('side-panel-state-change', handleSidePanelChange);
+      window.removeEventListener('side-panel-toggle-complete', handleSidePanelChange);
+    };
+  }, []);
 
   useEffect(() => {
     // Check if we're in a project selection transition
@@ -151,11 +183,20 @@ const WorkspaceArea = () => {
     }
   };
 
-  return (<div className="space-y-6 relative h-full flex flex-col">{error && (<Alert variant="destructive" className="max-w-2xl mx-auto flex-shrink-0"><AlertDescription>{error}</AlertDescription></Alert>)}
-      {state.showProjectCreation ? (<div className="flex justify-center w-full"><ProjectCreation 
+  return (<div className="space-y-6 relative h-full flex flex-col overflow-x-hidden">{error && (<Alert variant="destructive" className="max-w-2xl mx-auto flex-shrink-0"><AlertDescription>{error}</AlertDescription></Alert>)}
+      {state.showProjectCreation ? (<div 
+            className="flex justify-center overflow-x-hidden"
+            data-project-creation-container="true"
+            style={{ 
+              marginLeft: sidePanelState === 'expanded' ? '256px' : '42px',
+              transition: 'margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
+              width: `calc(100% - ${sidePanelState === 'expanded' ? '256px' : '42px'})`,
+              boxSizing: 'border-box'
+            }}
+          ><ProjectCreation 
             onProjectCreate={handleProjectCreate}
-            className="max-w-2xl mx-auto w-full project-creation-form"
-          /></div>) : (<div className="w-full h-full relative" style={{ flex: '1 1 auto', minHeight: '0' }}><WorkspaceVisual className="workspace-visual h-full" /></div>)}</div>);
+            className="max-w-2xl mx-auto project-creation-form"
+          /></div>) : (<div className="w-full h-full relative workspace-always-visible" style={{ flex: '1 1 auto', minHeight: '0', visibility: 'visible' }}><WorkspaceVisual className="workspace-visual h-full" /></div>)}</div>);
 };
 
 export default WorkspaceArea;

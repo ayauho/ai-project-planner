@@ -1,8 +1,14 @@
 // postcss.config.mjs
 export default {
   plugins: {
+    // Process @import rules first
+    'postcss-import': {},
+    // Process nested CSS - both plugins for different nesting syntaxes
+    'postcss-nested': {},
+    'postcss-nesting': {},
+    // Tailwind comes after nesting plugins
     'tailwindcss': {},
-    'autoprefixer': {},
-    'postcss-nested': {}, // Only use one nesting plugin
+    // Autoprefixer is last
+    'autoprefixer': {}
   }
 };

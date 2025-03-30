@@ -5,16 +5,16 @@ import { logger } from '@/lib/client/logger';
 import CollapseButton from './collapse-button';
 import { isMobileDevice } from '@/lib/client/utils/device-detection';
 
-const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
+const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
   const [isCollapsed, setIsCollapsed] = useState(false);
   const initialRenderRef = useRef(true);
   const isSmallScreen = useRef(false);
 
   // Initialization effect
-  useEffect(() => {
+  useEffect(() =>{
     try {
       // Check if we're on a small screen
-      isSmallScreen.current = window.innerWidth <= 768 || isMobileDevice();
+      isSmallScreen.current = window.innerWidth<= 768 || isMobileDevice();
       logger.debug('Side panel initialized', { isSmallScreen: isSmallScreen.current }, 'panel initialization');
       
       // Load saved state
@@ -41,9 +41,9 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
     initialRenderRef.current = false;
     
     // Listen for window resize events to update small screen status
-    const handleResize = () => {
+    const handleResize = () =>{
       const wasSmallScreen = isSmallScreen.current;
-      isSmallScreen.current = window.innerWidth <= 768 || isMobileDevice();
+      isSmallScreen.current = window.innerWidth<= 768 || isMobileDevice();
       
       // If transitioning to small screen and panel is expanded, collapse it
       if (!wasSmallScreen && isSmallScreen.current && !isCollapsed) {
@@ -57,38 +57,45 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
     
-    return () => {
+    return () =>{
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
   }, [isCollapsed]);
 
-  // Update side panel width CSS variable
-  const updateSidePanelWidthVar = (collapsed: boolean) => {
+  // Update side panel state - simplified approach that doesn't rely on CSS variables
+  const updateSidePanelWidthVar = (collapsed: boolean) =>{
     try {
-      // Set the CSS variable for the side panel width
-      document.documentElement.style.setProperty(
-        '--side-panel-width', 
-        collapsed ? (isSmallScreen.current ? '48px' : '64px') : '256px'
-      );
-      logger.debug('Updated side panel width CSS variable', { 
+      // Force resize event to update SVG dimensions after a short delay
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 250);
+      
+      // Dispatch event for immediate UI updates
+      window.dispatchEvent(new CustomEvent('side-panel-state-change', {
+        detail: { 
+          collapsed,
+          isSmallScreen: isSmallScreen.current
+        }
+      }));
+      
+      logger.debug('Updated side panel state', { 
         collapsed, 
-        isSmallScreen: isSmallScreen.current,
-        width: collapsed ? (isSmallScreen.current ? '48px' : '64px') : '256px'
+        isSmallScreen: isSmallScreen.current
       }, 'panel ui styles');
     } catch (error) {
-      logger.error('Failed to update side panel width variable', { error: String(error) }, 'panel ui styles error');
+      logger.error('Failed to update side panel state', { error: String(error) }, 'panel ui styles error');
     }
   };
 
   // Initialize side panel width variable on component mount
-  useEffect(() => {
+  useEffect(() =>{
     updateSidePanelWidthVar(isCollapsed);
   }, [isCollapsed]);
 
   // Listen for custom collapse events
-  useEffect(() => {
-    const handleForceCollapse = () => {
+  useEffect(() =>{
+    const handleForceCollapse = () =>{
       if (!isCollapsed) {
         logger.debug('Force collapsing side panel from external event', {}, 'panel ui event');
         handleToggle();
@@ -96,7 +103,7 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
     };
     
     // Listen for project selection events to auto-collapse on small screens
-    const handleProjectSelected = (_event: Event) => {
+    const handleProjectSelected = (_event: Event) =>{
       if (isSmallScreen.current && !isCollapsed) {
         logger.debug('Project selected on small screen, auto-collapsing panel', {}, 'panel ui responsive');
         handleToggle();
@@ -106,13 +113,13 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
     window.addEventListener('force-collapse-side-panel', handleForceCollapse);
     window.addEventListener('project-selected', handleProjectSelected);
     
-    return () => {
+    return () =>{
       window.removeEventListener('force-collapse-side-panel', handleForceCollapse);
       window.removeEventListener('project-selected', handleProjectSelected);
     };
   }, [isCollapsed]);
 
-  const handleToggle = () => {
+  const handleToggle = () =>{
     try {
       // Add transition blocker class to prevent SVG transform changes
       document.body.classList.add('side-panel-transitioning');
@@ -130,7 +137,7 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
       logger.info('Side panel toggle', { isCollapsed: newState }, 'panel ui state');
       
       // Dispatch toggle complete event after transition
-      setTimeout(() => {
+      setTimeout(() =>{
         // Remove transition blocker
         document.body.classList.remove('side-panel-transitioning');
         
@@ -149,34 +156,25 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
     }
   };
 
-  return (
-    <aside
+  return (<aside
       role="complementary"
       aria-label="Side Panel"
       className={`${className}`}
       data-side-panel="true"
       data-state={isCollapsed ? 'collapsed' : 'expanded'}
-    >
-      {/* Collapse button with fixed positioning */}
-      <div className="panel-collapse-button">
-        <CollapseButton
+      style={{
+        width: isCollapsed ? '42px' : '256px',
+        maxWidth: isCollapsed ? '42px' : '256px',
+        minWidth: isCollapsed ? '42px' : '256px'
+      }}
+    >{/* Collapse button with fixed positioning */}<div className="panel-collapse-button"><CollapseButton
           isCollapsed={isCollapsed}
           onToggle={handleToggle}
-        />
-      </div>
-      {/* Content container with proper overflow handling */}
-      <div className="h-full overflow-hidden pt-12 px-4 pr-0">
-        {/* Only hide content when collapsed */}
-        <div 
+        /></div>{/* Content container with proper overflow handling */}<div className="h-full overflow-hidden pt-12 px-4 pr-0">{/* Only hide content when collapsed */}<div 
           className={`h-full ${isCollapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}
           style={{ transition: 'opacity 0.2s ease-out, visibility 0.2s ease-out' }}
           aria-hidden={isCollapsed}
-        >
-          {children}
-        </div>
-      </div>
-    </aside>
-  );
+        >{children}</div></div></aside>);
 };
 
 export default PanelContainer;
