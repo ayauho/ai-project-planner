@@ -35,7 +35,7 @@ async function _checkIfUserHasProjects(userId: string): Promise<boolean>{
     const data = await response.json();
     
     // If the user has at least one project, return true
-    return Array.isArray(data.projects) && data.projects.length > 0;
+    return Array.isArray(data.projects) && data.projects.length >0;
   } catch (error) {
     logger.error('Error checking if user has projects', { 
       error: error instanceof Error ? error.message : String(error),
@@ -53,10 +53,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const ProjectCreation: React.FC<ProjectCreationProps> = ({
+const ProjectCreation: React.FC<ProjectCreationProps>= ({
   className = '',
   onProjectCreate
-}) => {
+}) =>{
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -64,7 +64,7 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
   const [_isMobile, setIsMobile] = useState(false);
 
   // Check for active project selection - avoid showing API warnings during transitions
-  useEffect(() => {
+  useEffect(() =>{
     // Check if we're in transition from project deletion to selection
     const isProjectSelectionInProgress = document.body.hasAttribute('data-project-selection-in-progress');
     const isRecentlyDeleted = document.body.hasAttribute('data-project-deleted-recently');
@@ -84,8 +84,8 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
       setIsInitializing(true);
       
       // Add event listener to detect when state stabilizes
-      const clearInitializing = () => {
-        setTimeout(() => {
+      const clearInitializing = () =>{
+        setTimeout(() =>{
           setIsInitializing(false);
         }, 1000);
       };
@@ -93,19 +93,19 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
       // Set a timeout as a fallback
       setTimeout(clearInitializing, 1500);
       
-      return () => {
+      return () =>{
         window.removeEventListener('project-selection-complete', clearInitializing);
       };
     } else {
       // Only initialize when stable
-      setTimeout(() => {
+      setTimeout(() =>{
         setIsInitializing(false);
       }, 500);
     }
   }, []);
   
   // Check if we're on a mobile device
-  useEffect(() => {
+  useEffect(() =>{
     const mobile = isMobileDevice();
     setIsMobile(mobile);
     logger.debug('Project creation form initialized', { isMobile: mobile }, 'project creation ui');
@@ -136,7 +136,7 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
         descriptionLength: result.description.length 
       }, 'project creation parsing');
 
-      const session = await import('@/lib/client/auth/storage').then(mod => mod.authStorage.getSession());
+      const session = await import('@/lib/client/auth/storage').then(mod =>mod.authStorage.getSession());
       if (!session?.user?._id) {
         throw new Error('No authenticated user found');
       }
@@ -261,7 +261,18 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
     const isSelectingProject = state.isLoading && !state.showProjectCreation;
     
     if (!isSelectingProject) {
-      return (<Alert variant="destructive"><AlertDescription>An OpenAI API key is required to create projects. Please configure your API key using the button in the side panel.</AlertDescription></Alert>);
+      return (
+        <div className="w-full max-w-42rem mx-auto">
+          <Alert 
+            variant="destructive"
+            className="w-full mx-auto mb-4"
+          >
+            <AlertDescription>
+              An OpenAI API key is required to create projects. Please configure your API key using the button in the side panel.
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
     }
   }
   
@@ -270,31 +281,47 @@ const ProjectCreation: React.FC<ProjectCreationProps> = ({
     return <div className="h-32 w-full"></div>;
   }
 
-  return (<div className="flex justify-center items-center w-full" style={{ maxWidth: "100%" }}><form
-      onSubmit={handleSubmit(onSubmit)}
-      className={`space-y-4 w-full project-creation-form ${className}`}
-      aria-busy={isProcessing}
-      style={{ maxWidth: "42rem" }}
-    ><div><label htmlFor="project-description" className="sr-only">Project Description</label><textarea
-          id="project-description"
-          {...register('description')}
-          placeholder="Describe your project... You can use formats like:&#13;&#10;Project Name / Description&#13;&#10;Project Name. Description&#13;&#10;Project Name\nDescription"
-          className="w-full p-2 border rounded-md resize-none h-32"
+  return (
+    <div className="w-full mx-auto" style={{ maxWidth: "42rem" }}>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className={`space-y-4 w-full project-creation-form ${className}`}
+        aria-busy={isProcessing}
+      >
+        <div>
+          <label htmlFor="project-description" className="sr-only">Project Description</label>
+          <textarea
+            id="project-description"
+            {...register('description')}
+            placeholder="Describe your project... You can use formats like:&#13;&#10;Project Name / Description&#13;&#10;Project Name. Description&#13;&#10;Project Name\nDescription"
+            className="w-full p-2 border rounded-md resize-none h-32"
+            disabled={isProcessing}
+            aria-invalid={Boolean(errors.description || extractionError)}
+            aria-describedby={
+              errors.description || extractionError ? "description-error" : undefined
+            }
+          />
+          {(errors.description || extractionError) && (
+            <div
+              id="description-error"
+              role="alert"
+              className="mt-1 text-sm text-red-500"
+            >
+              {errors.description?.message || extractionError}
+            </div>
+          )}
+        </div>
+        <button
+          type="submit"
           disabled={isProcessing}
-          aria-invalid={Boolean(errors.description || extractionError)}
-          aria-describedby={
-            errors.description || extractionError ? "description-error" : undefined
-          }
-        />{(errors.description || extractionError) && (<div
-            id="description-error"
-            role="alert"
-            className="mt-1 text-sm text-red-500"
-          >{errors.description?.message || extractionError}</div>)}</div><button
-        type="submit"
-        disabled={isProcessing}
-        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-        aria-disabled={isProcessing}
-      >{isProcessing ? 'Creating...' : 'Create Project'}</button></form></div>);
+          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
+          aria-disabled={isProcessing}
+        >
+          {isProcessing ? 'Creating...' : 'Create Project'}
+        </button>
+      </form>
+    </div>
+  );
 };
 
 export default ProjectCreation;

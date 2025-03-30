@@ -1,60 +1,163 @@
-/* This file contains extracted styles that were previously nested incorrectly */
+/* This file contains CSS that was extracted from globals.css to avoid nesting issues */
 
-/* Mobile view specific styles for common controls */
-@media (max-width: 768px) {
-  /* Improved common controls positioning */
-  .common-controls-container {
-    right: 0 !important;
-    top: 60px !important;
-    padding: 0.2rem !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-left-radius: 0.5rem !important;
-    background-color: white;
-  }
+/* Fix position and visibility of control elements on mobile */
+.task-split-button,
+.regenerate-control, 
+.delete-control,
+.svg-task-control {
+  position: relative !important;
+  transform-origin: center center !important;
 }
 
-@media (max-width: 768px) {
-  .common-controls-container > button {
-    border-top-right-radius: 0 !important;
-    border-top-left-radius: 0 !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-  }
+/* Controls positioning for all screen sizes */
+.task-split-button,
+.regenerate-control, 
+.delete-control,
+.svg-task-control,
+g[class*="task-control"],
+[data-control-type="split"],
+[data-control-type="regenerate"],
+[data-control-type="delete"] {
+  /* Base positioning that works across devices */
+  transform-origin: center center !important;
 }
 
+/* Mobile and small screen adaptations */
 @media (max-width: 768px) {
-  .common-controls-container[data-expanded="false"] > button {
-    border-bottom-right-radius: 0 !important;
+  /* Enhanced control positioning for mobile */
+  .task-split-button,
+  .regenerate-control, 
+  .delete-control,
+  .svg-task-control,
+  g[class*="task-control"],
+  [data-control-type="split"],
+  [data-control-type="regenerate"],
+  [data-control-type="delete"] {
+    /* Preserve original transform and increase visibility */
+    z-index: 1000 !important;
   }
-}
-
-@media (max-width: 768px) {
-  .common-controls-container[data-expanded="true"] > button {
-    border-bottom-right-radius: 9999px !important;
+  
+  /* Ensure layer-controls container has proper size */
+  .layer-controls {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    pointer-events: all !important;
   }
-}
-
-@media (max-width: 768px) {
-  #common-controls-panel {
-    right: 0 !important;
-    margin-top: 0 !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
+  
+  /* Ensure controls maintain their position relative to parent */
+  .layer-controls [data-task-id] {
+    /* Preserve the SVG transform */
+    transform-origin: center center !important;
   }
-}
 
-@media (max-width: 768px) {
-  #common-controls-panel > button {
-    padding: 0.2rem !important;
+  /* Increase touch targets for better touchability */
+  button, 
+  [role="button"],
+  .clickable,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    min-width: 44px;
   }
-}
 
-@media (max-width: 768px) {
-  .common-controls-container svg,
-  #common-controls-panel svg {
-    margin: auto !important;
+  /* Increase text size for better readability */
+  body {
+    font-size: 16px;
+  }
+  
+  /* Increase spacing between interactive elements */
+  .space-y-2 {
+    margin-top: 0.625rem;
+    margin-bottom: 0.625rem;
+  }
+  
+  /* Ensure proper scroll behavior on touch devices */
+  .overflow-y-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Adjust workspace dimensions for small screens */
+  .workspace-visual {
+    touch-action: manipulation;
+  }
+  
+  /* Enhance counters and buttons visibility on small screens */
+  .counter-display text,
+  .project-counter text,
+  .embedded-counter text {
+    font-size: 14px;
+  }
+  
+  /* Task controls for touch devices - make bigger and more visible */
+  .task-control-group, 
+  .task-split-button, 
+  .regenerate-control, 
+  .delete-control, 
+  .svg-task-control {
+    transform-origin: center !important;
+    z-index: 1000 !important; /* Ensure higher z-index for visibility */
+  }
+  
+  /* Increase size of control buttons for better touch targets */
+  .task-split-button .split-button circle.button-bg,
+  .regenerate-control circle.button-bg,
+  .delete-control circle.button-bg {
+    r: 16 !important; /* Larger radius for buttons */
+  }
+  
+  /* Ensure task-split-button elements remain positioned correctly */
+  g.task-split-button[data-mobile="true"] {
+    /* Force visibility */
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent other transforms from affecting positioning */
+    transform-box: fill-box !important;
+  }
+  
+  /* Fix for layer-controls container on mobile */
+  .layer-controls {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: visible !important;
+    pointer-events: all !important;
+  }
+  
+  /* Make pointer areas larger on mobile */
+  .split-button circle[style*="pointer-events: all"] {
+    r: 18 !important; /* Larger click area */
+  }
+
+  /* Welcome message styles for mobile */
+  header .text-sm.text-gray-600.mr-2.mt-1 {
+    font-size: 0.75rem;
+    vertical-align: middle;
+    display: flex;
+    align-items: center;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  
+  /* Remove blue highlight on touch */
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Make project list items more touch-friendly */
+  [data-project-id] {
+    padding: 0.5rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Special styling for HTML split buttons */
+  body .task-overlay-control {
+    /* Make sure overlay controls stay in position */
+    transform: translate(-50%, -50%) scale(1.2) !important;
   }
 }

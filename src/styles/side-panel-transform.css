@@ -52,19 +52,22 @@ html body [data-side-panel="true"][data-state="expanded"] {
   box-sizing: border-box !important;
 }
 
-/* Main content positioning with margin based on panel state */
+/* Main content positioning - no leftover margin! */
 [data-main-content="true"] {
-  margin-left: 0; /*var(--side-panel-expanded-width);*/
-  transition: margin-left var(--panel-transition-duration) var(--panel-transition-timing);
-  will-change: margin-left;
+  margin-left: 0 !important; /* No margin - main content should take full width */
+  padding-left: 42px !important; /* Instead use padding equal to collapsed panel width */
+  transition: padding-left var(--panel-transition-duration) var(--panel-transition-timing);
+  will-change: padding-left;
   position: relative;
   z-index: 10;
   visibility: visible !important; /* Ensure content is always visible */
+  box-sizing: border-box !important;
+  width: 100% !important;
 }
 
-/* Main content margin when panel is collapsed */
-body:has([data-side-panel="true"][data-state="collapsed"]) [data-main-content="true"] {
-  margin-left: 0; /*var(--side-panel-collapsed-width);*/
+/* Main content padding when panel is expanded */
+body:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
+  padding-left: var(--side-panel-expanded-width) !important;
 }
 
 /* Ensure transform-group never transitions during panel toggle */
@@ -176,18 +179,13 @@ body:has([data-side-panel]) .transform-group {
   padding-left: 0 !important;
 }
 
-/* Project creation form container margin */
+/* Project creation form container */
 div[data-project-creation-container="true"] {
-  margin-left: 42px; /* Fixed value for collapsed state */
-  transition: margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
-
-/* Project creation form adjustments */
-.project-creation-form {
-  left: auto !important;
-  transition: margin-left var(--panel-transition-duration) var(--panel-transition-timing);
+  margin-left: 0 !important; /* Remove margin completely */
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* Mobile adaptations */
@@ -209,15 +207,14 @@ div[data-project-creation-container="true"] {
     opacity: 0.5 !important;
   }
   
-  /* Main content margin for mobile */
+  /* Main content padding for mobile */
   [data-main-content="true"] {
-    margin-left: var(--side-panel-collapsed-mobile-width);
-    padding: 3px !important;
+    padding-left: var(--side-panel-collapsed-mobile-width) !important;
   }
   
-  /* Content margin when panel is collapsed on mobile */
-  body:has([data-side-panel="true"][data-state="collapsed"]) [data-main-content="true"] {
-    margin-left: var(--side-panel-collapsed-mobile-width);
+  /* Content margin when panel is expanded on mobile */
+  body:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
+    padding-left: var(--side-panel-expanded-width) !important;
   }
   
   /* Larger touch targets for project list items */
@@ -239,40 +236,6 @@ div[data-project-creation-container="true"] {
     color: #6B7280 !important; /* text-gray-500 equivalent */
     stroke: #6B7280 !important; /* For SVG stroke-based icons */
   }
-  
-  /* Project creation form adjustments */
-  .project-creation-form {
-    left: auto !important;
-  }
-  
-  .project-creation-form >button {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .project-creation-form textarea {
-    width: -webkit-fill-available !important;
-  }
-  
-  /* Make sure the side panel is always behind the main content on mobile */
-  [data-side-panel="true"] {
-    z-index: 35; /* Slightly lower than default to ensure proper layering */
-  }
-  
-  /* DO NOT override SVG transform attributes for controls */
-  .task-split-button,
-  .regenerate-control, 
-  .delete-control,
-  .svg-task-control,
-  g[class*="task-control"],
-  [data-control-type="split"],
-  [data-control-type="regenerate"],
-  [data-control-type="delete"] {
-    /* Preserve original transform and increase visibility */
-    transform-origin: center center !important;
-    z-index: 1000 !important;
-  }
 }
 
 /* Mobile view applied by device detection logic */
@@ -286,8 +249,7 @@ body[data-mobile-view="true"] [data-side-panel="true"][data-state="expanded"] {
 }
 
 body[data-mobile-view="true"] [data-main-content="true"] {
-  margin-left: var(--side-panel-collapsed-mobile-width);
-  padding: 3px !important;
+  padding-left: var(--side-panel-collapsed-mobile-width) !important;
 }
 
 /* Enhanced touch interface for all potential touch devices regardless of screen size */
@@ -296,7 +258,6 @@ body[data-mobile-view="true"] [data-main-content="true"] {
   button, 
   [role="button"],
   .clickable,
-  /*[data-side-panel="true"] .panel-collapse-button,*/
   .project-creation-form button {
     min-height: 44px;
     min-width: 44px;
@@ -310,17 +271,6 @@ body[data-mobile-view="true"] [data-main-content="true"] {
   /* Remove hover effects that might make touch interactions feel laggy */
   * {
     -webkit-tap-highlight-color: transparent;
-  }
-}
-
-/* Fallback for browsers that don't support :has() */
-@media (max-width: 1200px) {
-  [data-main-content="true"] {
-    margin-left: var(--side-panel-collapsed-width);
-  }
-  
-  [data-side-panel="true"][data-state="expanded"] + [data-main-content="true"] {
-    margin-left: var(--side-panel-expanded-width);
   }
 }
 

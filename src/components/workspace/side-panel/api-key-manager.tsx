@@ -199,33 +199,84 @@ const ApiKeyManager = ({ className = '' }: ApiKeyManagerProps) =>{
     }
   };
 
-  return (<div className={className}><Button
-        onClick={() =>setIsOpen(true)}
+  return (
+    <div className={className}>
+      <Button
+        onClick={() => setIsOpen(true)}
         className="w-full"
-      >Configure API Key</Button><Dialog open={isOpen} onOpenChange={setIsOpen}><DialogContent className="bg-white"><DialogHeader><DialogTitle className="text-gray-900">Configure OpenAI API Key</DialogTitle><DialogDescription className="text-gray-600">Enter your OpenAI API key to enable AI functionality.
-              The key will be stored securely in your browser.</DialogDescription></DialogHeader><div className="space-y-4"><Input
+      >
+        Configure API Key
+      </Button>
+      
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="bg-white max-w-md w-full mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900">Configure OpenAI API Key</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Enter your OpenAI API key to enable AI functionality.
+              The key will be stored securely in your browser.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Input
               type="text"
               placeholder="Enter your OpenAI API key"
               value={apiKey}
-              onChange={(e) =>setApiKey(e.target.value)}
+              onChange={(e) => setApiKey(e.target.value)}
               disabled={isValidating}
               className="bg-white text-gray-900 border-gray-300"
-            />{error && (<Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>)}
-            {isSuccess && (<Alert><AlertDescription>API key saved successfully!</AlertDescription></Alert>)}<div className="flex justify-end space-x-2">{apiKey && (<Button 
+            />
+            
+            {error && (
+              <Alert 
+                variant="destructive"
+                className="max-w-full"
+              >
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            {isSuccess && (
+              <Alert>
+                <AlertDescription>API key saved successfully!</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex justify-end space-x-2">
+              {apiKey && (
+                <Button 
                   variant="outline" 
                   onClick={handleClear}
                   disabled={isValidating}
                   className="bg-white hover:bg-gray-50"
-                >Clear Key</Button>)}<Button 
+                >
+                  Clear Key
+                </Button>
+              )}
+              
+              <Button 
                 variant="outline" 
-                onClick={() =>setIsOpen(false)}
+                onClick={() => setIsOpen(false)}
                 disabled={isValidating}
                 className="bg-white hover:bg-gray-50"
-              >Cancel</Button><Button 
+              >
+                Cancel
+              </Button>
+              
+              <Button 
                 onClick={validateAndSave}
                 disabled={isValidating}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-              >{isValidating ? 'Validating...' : 'Save'}</Button></div></div></DialogContent></Dialog></div>);
+              >
+                {isValidating ? 'Validating...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 };
 
 export default ApiKeyManager;

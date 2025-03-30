@@ -11,4 +11,4 @@ export default {
     // Autoprefixer is last
     'autoprefixer': {}
   }
-};
+}

@@ -11,19 +11,25 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Types } from 'mongoose';
 import type { ProjectWithTaskCount } from '@/lib/project/types';
 
-const WorkspaceArea = () => {
+const WorkspaceArea = () =>{
   const [state, setState] = useState<WorkspaceState>(workspaceStateManager.getState());
   const [error, setError] = useState<string | null>(null);
   const [sidePanelState, setSidePanelState] = useState<'expanded' | 'collapsed'>('collapsed');
   const initialRenderRef = useRef(true);
 
-  useEffect(() => {
-    // Check for side panel state on mount
-    const checkSidePanelState = () => {
+  useEffect(() =>{
+    // Check for side panel state on mount and track changes
+    const checkSidePanelState = () =>{
       const panel = document.querySelector('[data-side-panel="true"]');
       if (panel) {
         const isExpanded = panel.getAttribute('data-state') === 'expanded';
         setSidePanelState(isExpanded ? 'expanded' : 'collapsed');
+        
+        // Log state change for debugging
+        logger.debug('Side panel state change detected', { 
+          isExpanded, 
+          previousState: sidePanelState
+        }, 'workspace ui');
       }
     };
     
@@ -34,20 +40,20 @@ const WorkspaceArea = () => {
     }
     
     // Listen for side panel changes
-    const handleSidePanelChange = () => {
+    const handleSidePanelChange = () =>{
       checkSidePanelState();
     };
     
     window.addEventListener('side-panel-state-change', handleSidePanelChange);
     window.addEventListener('side-panel-toggle-complete', handleSidePanelChange);
     
-    return () => {
+    return () =>{
       window.removeEventListener('side-panel-state-change', handleSidePanelChange);
       window.removeEventListener('side-panel-toggle-complete', handleSidePanelChange);
     };
-  }, []);
+  }, [sidePanelState]);
 
-  useEffect(() => {
+  useEffect(() =>{
     // Check if we're in a project selection transition
     const isInTransition = 
       document.body.hasAttribute('data-project-selection-active') ||
@@ -62,7 +68,7 @@ const WorkspaceArea = () => {
     const unsubscribe = workspaceStateManager.subscribe(setState);
     
     // Add listener for project deletion event
-    const handleProjectDeletion = (event: CustomEvent) => {
+    const handleProjectDeletion = (event: CustomEvent) =>{
       const { projectId } = event.detail;
       logger.info('Project deleted event received in workspace area', { projectId }, 'project workspace event');
       
@@ -73,7 +79,7 @@ const WorkspaceArea = () => {
       document.body.setAttribute('data-project-deleted-recently', 'true');
       
       // Clear this flag after a short delay
-      setTimeout(() => {
+      setTimeout(() =>{
         document.body.removeAttribute('data-project-deleted-recently');
       }, 1000);
       
@@ -86,7 +92,7 @@ const WorkspaceArea = () => {
     
     window.addEventListener('project-deleted-after-task', handleProjectDeletion as EventListener);
     
-    return () => {
+    return () =>{
       unsubscribe();
       window.removeEventListener('project-deleted-after-task', handleProjectDeletion as EventListener);
     };
@@ -97,7 +103,7 @@ const WorkspaceArea = () => {
     description: string; 
     userId: string;
     _id?: string; // Added to receive projectId from child component
-  }): Promise<ProjectWithTaskCount> => {
+  }): Promise<ProjectWithTaskCount>=>{
     setError(null);
     try {
       logger.info('Starting project creation in WorkspaceArea', { name: data.name }, 'project workspace creation');
@@ -183,20 +189,40 @@ const WorkspaceArea = () => {
     }
   };
 
-  return (<div className="space-y-6 relative h-full flex flex-col overflow-x-hidden">{error && (<Alert variant="destructive" className="max-w-2xl mx-auto flex-shrink-0"><AlertDescription>{error}</AlertDescription></Alert>)}
-      {state.showProjectCreation ? (<div 
-            className="flex justify-center overflow-x-hidden"
-            data-project-creation-container="true"
-            style={{ 
-              marginLeft: sidePanelState === 'expanded' ? '256px' : '42px',
-              transition: 'margin-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)',
-              width: `calc(100% - ${sidePanelState === 'expanded' ? '256px' : '42px'})`,
-              boxSizing: 'border-box'
-            }}
-          ><ProjectCreation 
+  return (
+    <div className="space-y-6 relative h-full flex flex-col overflow-x-hidden">
+      {error && (
+        <Alert variant="destructive" className="max-w-2xl mx-auto flex-shrink-0">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {state.showProjectCreation ? (
+        <div 
+          className="flex justify-center overflow-x-hidden w-full"
+          data-project-creation-container="true"
+          style={{ 
+            marginLeft: '0px', // Remove left margin completely
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '0px 10px 0px 10px' // Add small padding on both sides
+          }}
+        >
+          <ProjectCreation 
             onProjectCreate={handleProjectCreate}
             className="max-w-2xl mx-auto project-creation-form"
-          /></div>) : (<div className="w-full h-full relative workspace-always-visible" style={{ flex: '1 1 auto', minHeight: '0', visibility: 'visible' }}><WorkspaceVisual className="workspace-visual h-full" /></div>)}</div>);
+          />
+        </div>
+      ) : (
+        <div 
+          className="w-full h-full relative workspace-always-visible" 
+          style={{ flex: '1 1 auto', minHeight: '0', visibility: 'visible' }}
+        >
+          <WorkspaceVisual className="workspace-visual h-full" />
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default WorkspaceArea;
