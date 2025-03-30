@@ -8,7 +8,7 @@ env | grep -v PASSWORD | grep -v KEY
 
 # Run the test connection script
 echo -e "\nRunning Node.js test script:"
-node src/test-mongo-connection.js
+node src/test-mongo-connection.cjs
 
 # Also test direct MongoDB connection
 echo -e "\nTesting direct MongoDB connection:"
