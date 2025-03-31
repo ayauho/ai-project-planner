@@ -53,12 +53,36 @@ export class TaskRectangleRenderer {
   render(
     container: SVGGElement | null, 
     task: TaskRect, 
-    options: { animate?: boolean } = {}
+    options: { animate?: boolean; checkApiKey?: boolean } = {}
   ): SVGGElement | null {
     if (!container) return null;
 
     const isExpanded = this.expandedStates.get(task.id) || false;
     const shouldAnimate = options.animate ?? false;
+    // Default to checking API key unless explicitly disabled
+    const shouldCheckApiKey = options.checkApiKey ?? true;
+    
+    // Check if API key exists using multiple methods for reliability
+    // First check body class, then data attribute as fallback
+    const hasApiKey = document.body.classList.contains('has-api-key') || 
+                      document.body.getAttribute('data-has-api-key') === 'true';
+    
+    // If initializing, we default to not having an API key to prevent flashing
+    const isInitializing = document.body.classList.contains('initializing-api-key-state');
+    const effectiveHasApiKey = isInitializing ? false : hasApiKey;
+    
+    // Add API key state to body - safeguard to ensure it's set
+    if (hasApiKey && !isInitializing) {
+      document.body.classList.add('has-api-key');
+      document.body.classList.remove('no-api-key');
+      document.body.setAttribute('data-has-api-key', 'true');
+      document.body.removeAttribute('data-no-api-key');
+    } else if (!hasApiKey && !isInitializing) {
+      document.body.classList.remove('has-api-key');
+      document.body.classList.add('no-api-key');
+      document.body.removeAttribute('data-has-api-key');
+      document.body.setAttribute('data-no-api-key', 'true');
+    }
     
     try {
       const selection = select(container);
@@ -121,6 +145,24 @@ export class TaskRectangleRenderer {
       // Update heights
       mainGroup.select('rect').attr('height', contentHeight);
       group.select(`#${clipId} rect`).attr('height', contentHeight);
+      
+      // Add data attribute to indicate this is a task rectangle (not a control)
+      if (shouldCheckApiKey) {
+        // Mark with a task-specific attribute rather than 'requires-api-key'
+        group.attr('data-task-rectangle', 'true');
+        
+        // Also add a class based on current API key state
+        if (effectiveHasApiKey) {
+          group.classed('has-api-key', true);
+          group.classed('no-api-key', false);
+        } else {
+          group.classed('has-api-key', false);
+          group.classed('no-api-key', true);
+        }
+        
+        // Add data attribute for more specific CSS targeting
+        group.attr('data-has-api-key', effectiveHasApiKey ? 'true' : 'false');
+      }
 
       // Create a transparent overlay for the entire task that handles clicks
       mainGroup.append('rect')
@@ -130,7 +172,7 @@ export class TaskRectangleRenderer {
         .attr('class', 'clickable-overlay')
         .style('pointer-events', 'all')
         .style('cursor', 'pointer')
-        .on('click', (event) => {
+        .on('click', (event) =>{
           // Prevent click from reaching "show more" button or other controls
           if ((event.target as Element).closest('.expand-button, .split-button')) {
             return;
@@ -159,7 +201,7 @@ export class TaskRectangleRenderer {
           // Handle the task selection directly without going through the event system
           // This prevents duplicate centering operations
           import('@/components/workspace/visual/task-hierarchy/state-coordinator')
-            .then(({ taskStateCoordinator }) => {
+            .then(({ taskStateCoordinator }) =>{
               // Call state coordinator with directClick flag to ensure only one centering occurs
               taskStateCoordinator.handleTaskSelection(
                 task.id, 
@@ -173,11 +215,11 @@ export class TaskRectangleRenderer {
               );
               
               // Clear the direct click flag after a short delay
-              setTimeout(() => {
+              setTimeout(() =>{
                 document.body.removeAttribute('data-direct-click-in-progress');
               }, 50);
             })
-            .catch(error => {
+            .catch(error =>{
               logger.error('Failed to import state coordinator', { error }, 'task-rectangle interaction error');
               
               // Clear the direct click flag on error
@@ -200,7 +242,7 @@ export class TaskRectangleRenderer {
               });
             });
           // Also emit event to animate connections to this task's children
-          setTimeout(() => {
+          setTimeout(() =>{
             this.eventEmitter.emit({
               taskId: task.id,
               type: 'reanimateConnection'
@@ -208,7 +250,7 @@ export class TaskRectangleRenderer {
           }, 300); // Give the state change time to propagate
         });
 
-      if (task.text.description && lines > 4) {
+      if (task.text.description && lines >4) {
         const margin = 5;
         const buttonSize = this.config.button.size;
 
@@ -226,7 +268,7 @@ export class TaskRectangleRenderer {
           .attr('height', buttonSize)
           .attr('fill', 'transparent')
           .style('pointer-events', 'all')
-          .on('click', (event) => {
+          .on('click', (event) =>{
             event.stopPropagation();
             this.toggleExpand(container, task);
           });
@@ -237,8 +279,45 @@ export class TaskRectangleRenderer {
           isExpanded,
           contentHeight,
           buttonSize,
-          () => this.toggleExpand(container, task)
+          () =>this.toggleExpand(container, task)
         );
+      }
+      
+      // Add split button only if API key exists and shouldCheckApiKey is true
+      if (shouldCheckApiKey) {
+        // Create a group for the split button with appropriate class
+        const splitButtonGroup = group.append('g')
+          .attr('class', `task-split-button${effectiveHasApiKey ? '' : ' hidden-control force-hidden-element'}`)
+          .attr('data-task-id', task.id)
+          .attr('data-control-type', 'split')
+          .attr('data-control-requires-api-key', 'true'); // Mark only the control as requiring API key
+        
+        // Hide the split button if no API key - be very aggressive with hiding
+        if (!effectiveHasApiKey) {
+          splitButtonGroup.style('display', 'none')
+            .style('visibility', 'hidden')
+            .style('opacity', '0')
+            .style('pointer-events', 'none')
+            .style('position', 'absolute')
+            .style('z-index', '-9999');
+          
+          // Add explicit data attributes
+          splitButtonGroup.attr('data-hidden-no-api-key', 'true');
+          
+          // Add these classes to ensure CSS targeting works
+          splitButtonGroup.classed('force-hidden-element', true);
+          splitButtonGroup.classed('hidden-control', true);
+          splitButtonGroup.classed('hidden-during-operation', true);
+        } else {
+          // Add explicit data attributes for visibility
+          splitButtonGroup.attr('data-visible-has-api-key', 'true');
+          
+          // Force visibility for key-present case
+          splitButtonGroup.style('visibility', 'visible')
+            .style('display', 'block')
+            .style('opacity', '1')
+            .style('pointer-events', 'auto');
+        }
       }
 
       // Store content height for future reference
@@ -282,7 +361,7 @@ export class TaskRectangleRenderer {
         animationManager.fadeIn(group.node() as SVGElement, { 
           duration: duration,
           delay: delay
-        }).then(() => {
+        }).then(() =>{
           // After fade in, ensure visibility is set correctly for hidden tasks
           if (task.state === 'hidden') {
             group.style('visibility', 'hidden');
@@ -522,7 +601,7 @@ export class TaskRectangleRenderer {
         tempText.text(word);
         const wordWidth = (tempText.node() as SVGTextElement).getComputedTextLength();
         
-        if (lineWidth + wordWidth > maxWidth) {
+        if (lineWidth + wordWidth >maxWidth) {
           lines++;
           line = [word];
           lineWidth = wordWidth;
@@ -533,7 +612,7 @@ export class TaskRectangleRenderer {
       }
       
       // Add the last line
-      if (line.length > 0) {
+      if (line.length >0) {
         lines++;
       }
       
@@ -545,7 +624,7 @@ export class TaskRectangleRenderer {
       
       return {
         titleHasMore: false,
-        descHasMore: isExpanded ? false : lines > 4,
+        descHasMore: isExpanded ? false : lines >4,
         fullMetrics: { lines }
       };
     } catch (error) {
@@ -619,7 +698,7 @@ export class TaskRectangleRenderer {
         
         group.transition(t)
           .style('opacity', targetOpacity)
-          .on('end', () => {
+          .on('end', () =>{
             // After transition completes, update visibility for hidden state
             if (newState === 'hidden') {
               group.style('visibility', 'hidden');
@@ -640,7 +719,7 @@ export class TaskRectangleRenderer {
             
             // If transitioning to active state, also trigger animation of connections
             if (newState === 'active' && previousState !== 'active') {
-              setTimeout(() => {
+              setTimeout(() =>{
                 this.eventEmitter.emit({
                   taskId,
                   type: 'reanimateConnection'

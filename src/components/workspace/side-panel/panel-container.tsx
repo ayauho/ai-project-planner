@@ -8,13 +8,11 @@ import { isMobileDevice } from '@/lib/client/utils/device-detection';
 const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
   const [isCollapsed, setIsCollapsed] = useState(false);
   const initialRenderRef = useRef(true);
-  const isSmallScreen = useRef(false);
-
-  // Initialization effect
-  useEffect(() =>{
+  const isSmallScreen = useRef(false);  // Initialization effect
+  useEffect(() => {
     try {
       // Check if we're on a small screen
-      isSmallScreen.current = window.innerWidth<= 768 || isMobileDevice();
+      isSmallScreen.current = window.innerWidth <= 768 || isMobileDevice();
       logger.debug('Side panel initialized', { isSmallScreen: isSmallScreen.current }, 'panel initialization');
       
       // Load saved state
@@ -41,9 +39,9 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
     initialRenderRef.current = false;
     
     // Listen for window resize events to update small screen status
-    const handleResize = () =>{
+    const handleResize = () => {
       const wasSmallScreen = isSmallScreen.current;
-      isSmallScreen.current = window.innerWidth<= 768 || isMobileDevice();
+      isSmallScreen.current = window.innerWidth <= 768 || isMobileDevice();
       
       // If transitioning to small screen and panel is expanded, collapse it
       if (!wasSmallScreen && isSmallScreen.current && !isCollapsed) {
@@ -54,16 +52,35 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
       }
     };
     
+    // Set up main content touch/click handler for small screens
+    const handleMainContentTouch = (e: MouseEvent | TouchEvent) => {
+      if (isSmallScreen.current && !isCollapsed) {
+        // Only collapse when touching main content, not the side panel
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-side-panel="true"]')) {
+          logger.debug('Main content touched on small screen, collapsing panel', {}, 'panel ui responsive');
+          handleToggle();
+          e.preventDefault();
+        }
+      }
+    };
+    
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
     
-    return () =>{
+    // Add touch/click handlers for main content
+    if (isSmallScreen.current) {
+      document.addEventListener('click', handleMainContentTouch, { passive: false });
+      document.addEventListener('touchstart', handleMainContentTouch, { passive: false });
+    }
+    
+    return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
+      document.removeEventListener('click', handleMainContentTouch);
+      document.removeEventListener('touchstart', handleMainContentTouch);
     };
-  }, [isCollapsed]);
-
-  // Update side panel state - simplified approach that doesn't rely on CSS variables
+  }, [isCollapsed]);// Update side panel state - simplified approach that doesn't rely on CSS variables
   const updateSidePanelWidthVar = (collapsed: boolean) =>{
     try {
       // Force resize event to update SVG dimensions after a short delay
@@ -166,6 +183,18 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
         width: isCollapsed ? '42px' : '256px',
         maxWidth: isCollapsed ? '42px' : '256px',
         minWidth: isCollapsed ? '42px' : '256px'
+      }}
+      // Add click/touch handler to expand collapsed panel on small screens
+      onClick={(e) => {
+        if (isSmallScreen.current && isCollapsed) {
+          // Prevent expansion when clicking the collapse button itself
+          const target = e.target as HTMLElement;
+          if (!target.closest('.panel-collapse-button')) {
+            logger.debug('Collapsed panel touched on small screen, expanding panel', {}, 'panel ui responsive');
+            handleToggle();
+            e.stopPropagation();
+          }
+        }
       }}
     >{/* Collapse button with fixed positioning */}<div className="panel-collapse-button"><CollapseButton
           isCollapsed={isCollapsed}

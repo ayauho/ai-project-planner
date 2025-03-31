@@ -238,18 +238,27 @@ const ProjectList = ({
       className={`overflow-y-auto h-full ${className}`}
       style={{ marginRight: 0 }}
       data-project-list
-    ><div className="space-y-2 py-2 pr-2 pl-0">{projects.map((project) => (<div
+    ><div className="space-y-2 py-2 pr-2 pl-0">{projects.map((project) => {
+          // Explicitly determine if this project is selected
+          const isSelected = project.id === selectedId;
+          
+          return (<div
             key={project.id}
             data-project-id={project.id}
+            data-selected={isSelected ? "true" : "false"}
             onClick={() => handleSelect(project.id)}
-            className={`w-full text-left py-2 pl-2 pr-0 rounded-md hover:bg-gray-100 transition-colors cursor-pointer
-              ${project.id === selectedId ? 'bg-gray-100' : ''}
-              ${project.id === restoredProjectIdRef.current && !selectedId ? 'bg-gray-50 border border-blue-200' : ''}`}
+            className={`w-full text-left py-2 pl-2 pr-0 rounded-md hover:bg-gray-100 transition-colors cursor-pointer project-item ${
+              isSelected ? 'bg-gray-200 active project-selected' : ''
+            } ${
+              project.id === restoredProjectIdRef.current && !selectedId ? 'bg-gray-50 border border-blue-200' : ''
+            }`}
           ><div className="flex items-start justify-between group"><div className="flex flex-col"><div className="flex items-center"><span className="text-sm font-medium">{project.name}</span>{isSelecting && project.id === selectedId && (<Loader2 className="ml-2 w-3 h-3 text-blue-500 animate-spin" />)}</div><span className="text-xs text-gray-500">Tasks: {project.tasksCount} · Modified: {project.lastModifiedDate.toLocaleDateString()}</span></div><button
                 onClick={(e) => handleDelete(e, project.id, project.name)}
                 className="p-1 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Delete project"
-              ><Trash2 className="w-4 h-4 text-red-500" /></button></div></div>))}</div></div>);
+              ><Trash2 className="w-4 h-4 text-red-500" /></button></div></div>
+          );
+        })}</div></div>);
 };
 
 export default ProjectList;

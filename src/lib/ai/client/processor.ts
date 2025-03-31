@@ -31,7 +31,7 @@ export interface RequestInput {
   siblings?: AITaskInput[];
 }
 
-const cleanJsonResponse = (content: string): unknown => {
+const cleanJsonResponse = (content: string): unknown =>{
   try {
     const cleaned = content
       .replace(/```json\n?/g, "")
@@ -51,7 +51,7 @@ const cleanJsonResponse = (content: string): unknown => {
 export const processAIRequest = async (
   type: OperationType,
   data: RequestInput
-): Promise<AITaskResponse[]> => {
+): Promise<AITaskResponse[]>=>{
   try {
     logger.debug(
       "[TRACE] Starting client AI request",
@@ -130,7 +130,7 @@ export const processAIRequest = async (
       "ai-client storage"
     );
     const allKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
+    for (let i = 0; i< localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key) {
         if (
@@ -270,7 +270,7 @@ export const processAIRequest = async (
           messages,
           temperature: 0.7,
         })
-        .catch((error) => {
+        .catch((error) =>{
           logger.error(
             "OpenAI API request failed",
             {
@@ -306,7 +306,7 @@ export const processAIRequest = async (
       // For decompose, handle both array and single object responses
       if (type === "decompose") {
         if (Array.isArray(parsed)) {
-          return parsed.map((item) => ({
+          return parsed.map((item) =>({
             name: item.name,
             description: item.description,
           }));
@@ -340,7 +340,7 @@ export const processAIRequest = async (
 
       let result: AITaskResponse[];
       if (type === "split") {
-        result = (parsed as AITaskResponse[]).map((item) => ({
+        result = (parsed as AITaskResponse[]).map((item) =>({
           name: item.name,
           description: item.description,
         }));
@@ -387,6 +387,29 @@ export const processAIRequest = async (
       },
       "ai-client error"
     );
+    
+    // Try to report the error to the error connector for user notification
+    // but don't duplicate error reporting that happens in split/regenerate handlers
+    if (type === 'decompose') {
+      try {
+        import('@/lib/client/error-connector').then(({ aiErrorConnector }) =>{
+          aiErrorConnector.reportAIError(
+            error instanceof Error ? error : String(error),
+            type
+          );
+        }).catch(() =>{
+          // If import fails, just continue with throwing the error
+        });
+      } catch (reportError) {
+        // Ignore errors from the reporting mechanism
+        logger.warn(
+          "Failed to report AI error to error connector", 
+          { reportError: String(reportError) },
+          "ai-client error"
+        );
+      }
+    }
+    
     throw error;
   }
 };

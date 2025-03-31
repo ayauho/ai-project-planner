@@ -212,29 +212,30 @@ const ProjectCreation: React.FC<ProjectCreationProps>= ({
         document.body.classList.remove('project-creation-in-progress');
         
         // Remove event listener
-        document.removeEventListener('project-ready', handleProjectReady);
-        
-        // Clear creation flags after a delay
-        setTimeout(() =>{
-          sessionStorage.removeItem('__creating_project');
-        }, 1000);
-      };
-      
-      // Listen for the project-ready event
-      document.addEventListener('project-ready', handleProjectReady);
-      
-      // Call the parent component's callback
-      await onProjectCreate(createdProject);
-      
-      // Now explicitly select the project to ensure it's displayed
-      await workspaceStateManager.selectProject(projectId, true);
-      
-      // Fallback cleanup of creation state after timeout
-      setTimeout(() =>{
-        document.body.classList.remove('project-creation-in-progress');
+        document.removeEventListener('project-ready', handleProjectReady);      // Clear creation flags after a delay
+      setTimeout(() => {
         sessionStorage.removeItem('__creating_project');
-      }, 10000);
-    } catch (error) {
+      }, 1000);
+    };
+    
+    // Listen for the project-ready event
+    document.addEventListener('project-ready', handleProjectReady);
+    
+    // Call the parent component's callback
+    await onProjectCreate(createdProject);
+    
+    // Now explicitly select the project to ensure it's displayed
+    await workspaceStateManager.selectProject(projectId, true);
+    
+    // Fallback cleanup of creation state after timeout
+    setTimeout(() => {
+      document.body.classList.remove('project-creation-in-progress');
+      sessionStorage.removeItem('__creating_project');
+    }, 10000);
+    
+    // Reset the form state as we've successfully created a project
+    setIsProcessing(false);// Reset the form state as we've successfully created a project
+    setIsProcessing(false);} catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to process project description';
       logger.error('Project creation failed', { error: message }, 'project creation error');
       setExtractionError(message);
@@ -249,6 +250,12 @@ const ProjectCreation: React.FC<ProjectCreationProps>= ({
         isLoading: false,
         error: message
       }, 'error');
+      
+      // Reset the button state to allow retrying
+      setIsProcessing(false);
+      
+      // Reset the button state to allow retrying
+      setIsProcessing(false);
     } finally {
       setIsProcessing(false);
     }

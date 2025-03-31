@@ -1,7 +1,16 @@
 'use client';
+
 import { useEffect } from 'react';
 import { logger } from '@/lib/client/logger';
 import { isMobileDevice } from '@/lib/client/utils/device-detection';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the API Key Controls Visibility Manager
+// We use dynamic import with ssr: false to ensure it only runs in the browser
+const ApiKeyControlsVisibilityManager = dynamic(
+  () => import('@/components/workspace/api-key-visibility/ApiKeyControlsVisibilityManager'),
+  { ssr: false }
+);
 
 /**
  * Component to initialize workspace features
@@ -56,6 +65,9 @@ const WorkspaceInitializer = () => {
       logger.info('Workspace initializer unmounted', {}, 'workspace initialization');
     };
   }, []);
-  return null; // This is a non-visual component
+  
+  // Return the API Key Controls Visibility Manager component
+  return <ApiKeyControlsVisibilityManager />;
 };
+
 export default WorkspaceInitializer;

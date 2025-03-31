@@ -1,0 +1,74 @@
+/* API key-based visibility for task controls */
+
+/* Base state - hide task controls by default when initializing */
+.initializing-api-key-state .task-control,
+.initializing-api-key-state .task-split-button,
+.initializing-api-key-state .common-controls-container,
+.initializing-api-key-state [data-task-control="true"] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* When no API key is present */
+body.no-api-key .task-control,
+body.no-api-key .task-split-button,
+body.no-api-key .common-controls-container,
+body.no-api-key [data-task-control="true"],
+body[data-no-api-key="true"] .task-control,
+body[data-no-api-key="true"] .task-split-button,
+body[data-no-api-key="true"] .common-controls-container,
+body[data-no-api-key="true"] [data-task-control="true"] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  display: none !important;
+}
+
+/* When API key is present */
+body.has-api-key .task-control,
+body.has-api-key .task-split-button,
+body.has-api-key .common-controls-container,
+body.has-api-key [data-task-control="true"],
+body[data-has-api-key="true"] .task-control,
+body[data-has-api-key="true"] .task-split-button,
+body[data-has-api-key="true"] .common-controls-container,
+body[data-has-api-key="true"] [data-task-control="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  display: block;
+}
+
+/* Task rectangles should always be visible regardless of API key status */
+body.no-api-key .task-rect,
+body.no-api-key .project-rect,
+body[data-no-api-key="true"] .task-rect,
+body[data-no-api-key="true"] .project-rect,
+body.has-api-key .task-rect,
+body.has-api-key .project-rect,
+body[data-has-api-key="true"] .task-rect,
+body[data-has-api-key="true"] .project-rect {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* SVG-specific selectors for task rectangles */
+body.no-api-key svg g[id^="task-"],
+body.no-api-key svg g[id^="project-"],
+body[data-no-api-key="true"] svg g[id^="task-"],
+body[data-no-api-key="true"] svg g[id^="project-"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Ensure connections are always visible */
+body.no-api-key .connection-line,
+body.no-api-key .connection-group,
+body[data-no-api-key="true"] .connection-line,
+body[data-no-api-key="true"] .connection-group {
+  opacity: 1 !important;
+  visibility: visible !important;
+}

@@ -14,6 +14,9 @@ interface SubtaskInput {
 }
 
 class TaskGeneratorClientImpl {
+  // Track in-progress operations to prevent duplicates
+  private inProgressOperations = new Set<string>();
+
   private async getAncestorChain(task: Task): Promise<Task[]>{
     const ancestors: Task[] = [];
     let currentTaskId = task.parentId;
@@ -44,7 +47,7 @@ class TaskGeneratorClientImpl {
 
     // Add project at the end if not already included
     const projectId = task.projectId?.toString();
-    if (projectId && !ancestors.some(a => a._id?.toString() === projectId)) {
+    if (projectId && !ancestors.some(a =>a._id?.toString() === projectId)) {
       try {
         const projectResponse = await fetch(`/api/projects/${projectId}`);
         if (projectResponse.ok) {
@@ -63,7 +66,7 @@ class TaskGeneratorClientImpl {
     logger.debug('[TRACE] Completed ancestor chain collection', {
       taskId: task._id?.toString(),
       chainLength: ancestors.length,
-      chain: ancestors.map((a, i) => ({ 
+      chain: ancestors.map((a, i) =>({ 
         id: a._id?.toString() || 'unknown', 
         name: a.name,
         position: i
@@ -76,7 +79,7 @@ class TaskGeneratorClientImpl {
   /**
    * Safely fetch sibling tasks with fallback and error handling
    */
-  private async getSiblingTasks(task: Task, taskId: string | Types.ObjectId): Promise<Task[]> {
+  private async getSiblingTasks(task: Task, taskId: string | Types.ObjectId): Promise<Task[]>{
     try {
       let siblings: Task[] = [];
       let endpoint = '';
@@ -118,7 +121,7 @@ class TaskGeneratorClientImpl {
         
         // Filter out the current task and any invalid entries
         siblings = Array.isArray(siblingsData) 
-          ? siblingsData.filter((sibling: Task) => {
+          ? siblingsData.filter((sibling: Task) =>{
               // Make sure the sibling has an ID
               if (!sibling._id) {
                 logger.warn('Found sibling without ID', { sibling }, 'task-operations client warning');
@@ -146,7 +149,7 @@ class TaskGeneratorClientImpl {
         logger.debug('[TRACE] Fetched and filtered siblings successfully', { 
           taskId,
           siblingCount: siblings.length,
-          siblingIds: siblings.map((s: Task) => s._id?.toString())
+          siblingIds: siblings.map((s: Task) =>s._id?.toString())
         }, 'task-operations client');
       } else {
         logger.warn('Failed to fetch siblings', { 
@@ -177,8 +180,37 @@ class TaskGeneratorClientImpl {
   }
 
   async splitTask(taskId: string | Types.ObjectId, _options?: TaskGenerationOptions): Promise<Task[]>{
+    const taskIdStr = taskId.toString();
+    
+    // Check if this operation is already in progress
+    if (this.inProgressOperations.has(`split-${taskIdStr}`)) {
+      logger.warn('Split operation already in progress for this task', { taskId: taskIdStr }, 'task-operations client');
+      throw new TaskGenerationError('An operation is already in progress for this task');
+    }
+    
+    // Mark operation as in progress
+    this.inProgressOperations.add(`split-${taskIdStr}`);
+    
     try {
-      logger.info('Starting task split operation', { taskId }, 'task-operations client');
+      logger.info('Starting task split operation', { taskId: taskIdStr }, 'task-operations client');
+
+      // Check if body has no-api-key class
+      if (document.body.classList.contains('no-api-key')) {
+        const error = new Error('OpenAI API key is required to split tasks. Please configure your API key in the side panel.');
+        
+        // Try to report the error through the error connector
+        try {
+          import('@/lib/client/error-connector').then(({ aiErrorConnector }) =>{
+            aiErrorConnector.reportAIError(error, 'split');
+          }).catch(() =>{
+            // If import fails, continue with regular error handling
+          });
+        } catch (reportError) {
+          // Ignore errors from the reporting mechanism
+        }
+        
+        throw error;
+      }
 
       // Get task data
       const taskResponse = await fetch(`/api/tasks/${taskId}`);
@@ -194,7 +226,7 @@ class TaskGeneratorClientImpl {
         taskId: task._id?.toString(),
         taskName: task.name,
         ancestorCount: ancestors.length,
-        ancestorNames: ancestors.map((a, i) => `${i}: ${a.name}`)
+        ancestorNames: ancestors.map((a, i) =>`${i}: ${a.name}`)
       }, 'task-operations client');
 
       // Extract only the needed fields for AI processing
@@ -204,7 +236,7 @@ class TaskGeneratorClientImpl {
         definition: 'task'
       };
 
-      const ancestorInputs: AITaskInput[] = ancestors.map(ancestor => ({
+      const ancestorInputs: AITaskInput[] = ancestors.map(ancestor =>({
         name: ancestor.name,
         description: ancestor.description,
         definition: ancestor.isProjectRoot ? 'project' : 'task'
@@ -223,7 +255,7 @@ class TaskGeneratorClientImpl {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          subtasks: aiSubtasks.map((subtask: AITaskResponse): SubtaskInput => ({
+          subtasks: aiSubtasks.map((subtask: AITaskResponse): SubtaskInput =>({
             name: subtask.name,
             description: subtask.description,
             position: { x: 0, y: 0 }
@@ -246,17 +278,70 @@ class TaskGeneratorClientImpl {
       return subtasks;
 
     } catch (error) {
-      logger.error('Failed to split task', { taskId, error }, 'task-operations client error');
-      throw new TaskGenerationError('Failed to split task', error instanceof Error ? error : undefined);
+      logger.error('Failed to split task', { 
+        taskId: taskIdStr, 
+        error: error instanceof Error ? error.message : String(error) 
+      }, 'task-operations client error');
+      
+      // Try to report the error through the error connector
+      try {
+        import('@/lib/client/error-connector').then(({ aiErrorConnector }) =>{
+          aiErrorConnector.reportAIError(
+            error instanceof Error ? error : String(error), 
+            'split'
+          );
+        }).catch(() =>{
+          // If import fails, continue with regular error handling
+        });
+      } catch (reportError) {
+        // Ignore errors from the reporting mechanism
+      }
+      
+      // Use the original error message rather than a generic one
+      // This helps avoid duplicate error messages
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new TaskGenerationError(errorMessage, error instanceof Error ? error : undefined);
+    } finally {
+      // Always remove from in-progress operations, even if there was an error
+      this.inProgressOperations.delete(`split-${taskIdStr}`);
     }
   }  
   
   async regenerateTask(taskId: string | Types.ObjectId, options?: TaskGenerationOptions): Promise<Task>{
+    const taskIdStr = taskId.toString();
+    
+    // Check if this operation is already in progress
+    if (this.inProgressOperations.has(`regenerate-${taskIdStr}`)) {
+      logger.warn('Regenerate operation already in progress for this task', { taskId: taskIdStr }, 'task-operations client');
+      throw new TaskGenerationError('An operation is already in progress for this task');
+    }
+    
+    // Mark operation as in progress
+    this.inProgressOperations.add(`regenerate-${taskIdStr}`);
+    
     try {
       logger.info('Starting task regeneration', { 
-        taskId,
+        taskId: taskIdStr,
         shouldRemoveSubtasks: options?.shouldRemoveSubtasks 
       }, 'task-operations client');
+      
+      // Check if body has no-api-key class
+      if (document.body.classList.contains('no-api-key')) {
+        const error = new Error('OpenAI API key is required to regenerate tasks. Please configure your API key in the side panel.');
+        
+        // Try to report the error through the error connector
+        try {
+          import('@/lib/client/error-connector').then(({ aiErrorConnector }) =>{
+            aiErrorConnector.reportAIError(error, 'regenerate');
+          }).catch(() =>{
+            // If import fails, continue with regular error handling
+          });
+        } catch (reportError) {
+          // Ignore errors from the reporting mechanism
+        }
+        
+        throw error;
+      }
 
       // Get task data for context
       const taskResponse = await fetch(`/api/tasks/${taskId}`);
@@ -280,7 +365,7 @@ class TaskGeneratorClientImpl {
       logger.debug('[TRACE] Fetched siblings for context', {
         taskId: task._id?.toString(),
         siblingCount: siblings.length,
-        siblingNames: siblings.map(s => s.name)
+        siblingNames: siblings.map(s =>s.name)
       }, 'task-operations client');
 
       // Extract needed fields for AI processing
@@ -290,13 +375,13 @@ class TaskGeneratorClientImpl {
         definition: 'task'
       };
 
-      const ancestorInputs: AITaskInput[] = ancestors.map(ancestor => ({
+      const ancestorInputs: AITaskInput[] = ancestors.map(ancestor =>({
         name: ancestor.name,
         description: ancestor.description,
         definition: ancestor.isProjectRoot ? 'project' : 'task'
       }));
 
-      const siblingInputs: AITaskInput[] = siblings.map(sibling => ({
+      const siblingInputs: AITaskInput[] = siblings.map(sibling =>({
         name: sibling.name,
         description: sibling.description,
         definition: 'task'
@@ -364,11 +449,32 @@ class TaskGeneratorClientImpl {
 
     } catch (error) {
       logger.error('Failed to regenerate task', { 
-        taskId, 
+        taskId: taskIdStr, 
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined
       }, 'task-operations client error');
-      throw new TaskGenerationError('Failed to regenerate task', error instanceof Error ? error : undefined);
+      
+      // Try to report the error through the error connector
+      try {
+        import('@/lib/client/error-connector').then(({ aiErrorConnector }) =>{
+          aiErrorConnector.reportAIError(
+            error instanceof Error ? error : String(error), 
+            'regenerate'
+          );
+        }).catch(() =>{
+          // If import fails, continue with regular error handling
+        });
+      } catch (reportError) {
+        // Ignore errors from the reporting mechanism
+      }
+      
+      // Use the original error message rather than a generic one
+      // This helps avoid duplicate error messages
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new TaskGenerationError(errorMessage, error instanceof Error ? error : undefined);
+    } finally {
+      // Always remove from in-progress operations, even if there was an error
+      this.inProgressOperations.delete(`regenerate-${taskIdStr}`);
     }
   }
 }

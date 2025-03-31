@@ -10,6 +10,8 @@ import { taskControlEventDispatcher } from '@/lib/svg/controls/task/event-dispat
 import { select } from 'd3-selection';
 import { TaskEventEmitter } from '@/lib/client/visual/task/events';
 import { TaskControls } from '@/lib/svg/controls/task/controls';
+import { useApiKeyCheck } from '@/lib/hooks/useApiKeyCheck';
+import { apiKeyEvents } from '@/lib/events/apiKey';
 
 interface CommonControlsProps {
   className?: string;
@@ -77,16 +79,19 @@ function controlsReducer(state: ControlState, action: Action): ControlState {
 }
 
 // Create a unique ID for SVG controls
-const getSvgControlId = (taskId: string, mode: 'regenerate' | 'delete') => `${mode}-control-${taskId}`;
-
-/**
+const getSvgControlId = (taskId: string, mode: 'regenerate' | 'delete') => `${mode}-control-${taskId}`;/**
  * Common controls group component that provides regenerate and delete functionality
- * across all task rectangles using SVG-native controls
+ * across all task rectangles using SVG-native controls.
+ * Only visible when an API key is available.
  */
-export const CommonControlsGroup: React.FC<CommonControlsProps> = ({
+export const CommonControlsGroup: React.FC<CommonControlsProps>= ({
   className = '',
   _style
-}) => {// Use reducer for more predictable state management
+}) =>{
+  // Check if API key is available
+  const hasApiKey = useApiKeyCheck();
+  
+  // Use reducer for more predictable state management
   const [state, dispatch] = useReducer(controlsReducer, initialState);
   const { expanded, activeMode, isTransitioning } = state;
   
@@ -119,10 +124,18 @@ export const CommonControlsGroup: React.FC<CommonControlsProps> = ({
       }
     });
     
+    // Listen for API key changes
+    const unsubscribeFromApiKeyEvents = apiKeyEvents.subscribe(() => {
+      logger.debug('API key change detected in common controls', {}, 'controls api-key');
+      // The component will unmount and remount based on useApiKeyCheck
+      // No additional handling needed here
+    });
+    
     return () => {
       if (controlsRef.current) {
         controlsRef.current = null;
       }
+      unsubscribeFromApiKeyEvents();
     };
   }, []);
   
@@ -1611,8 +1624,12 @@ export const CommonControlsGroup: React.FC<CommonControlsProps> = ({
         error 
       }, 'controls error');
     }
-  }, []);
-
+  }, []);  // Conditional rendering AFTER all hooks have been called
+  if (!hasApiKey) {
+    logger.debug('Common controls not rendered - no API key available', {}, 'controls api-key');
+    return null;
+  }
+  
   return (<div 
     ref={containerRef}
     className={`fixed top-[70px] right-0 z-[9999] flex flex-col items-center common-controls-container shadow-lg ${className}`}
@@ -1624,62 +1641,35 @@ export const CommonControlsGroup: React.FC<CommonControlsProps> = ({
       onClick={handleToggleExpand}
       title="Common controls"
       data-testid="common-controls-toggle"
-    ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4" /><circle cx="12" cy="17" r="4" /></svg></button>
-      
-      {/* Controls container - for better debugging and isolation, add the zIndex here */}
-      <div 
+    ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4" /><circle cx="12" cy="17" r="4" /></svg></button>{/* Controls container - for better debugging and isolation, add the zIndex here */}<div 
         id="common-controls-panel"
         className={`transition-all duration-300 ease-in-out overflow-hidden bg-white rounded-lg shadow-lg mt-2 common-controls-panel ${
           expanded ? 'max-h-28 p-2 opacity-100' : 'max-h-0 p-0 opacity-0 pointer-events-none'
         }`}
         style={{ zIndex: 50 }}
         data-testid="common-controls-panel"
-      >
-        {/* Regenerate button */}
-        <button
+      >{/* Regenerate button */}<button
           className={`mb-2 p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${
             activeMode === 'regenerate' 
               ? 'bg-blue-500 text-white regenerate-active' 
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}
-          onClick={(e) => handleModeToggle(e, 'regenerate')}
+          onClick={(e) =>handleModeToggle(e, 'regenerate')}
           data-mode="regenerate"
           title="Toggle regenerate controls"
           aria-pressed={activeMode === 'regenerate'}
           data-testid="regenerate-mode-button"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M8 16H3v5" />
-          </svg>
-        </button>
-        
-        {/* Delete button */}
-        <button
+        ><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg></button>{/* Delete button */}<button
           className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors ${
             activeMode === 'delete' 
               ? 'bg-red-500 text-white delete-active' 
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
           }`}
-          onClick={(e) => handleModeToggle(e, 'delete')}
+          onClick={(e) =>handleModeToggle(e, 'delete')}
           data-mode="delete"
           title="Toggle delete controls"
           aria-pressed={activeMode === 'delete'}
           data-testid="delete-mode-button"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            <line x1="10" y1="11" x2="10" y2="17" />
-            <line x1="14" y1="11" x2="14" y2="17" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-};
+        ><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg></button></div></div>);};
 
 export default CommonControlsGroup;

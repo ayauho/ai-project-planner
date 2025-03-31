@@ -12,6 +12,8 @@
 @import './transform-stabilization.css';
 @import './common-controls.css';
 @import './no-nested-css.css';
+@import "./api-key-controls.css";
+@import "./toast.css";
 
 /* Tailwind directives come after imports */
 @tailwind base;
@@ -208,6 +210,25 @@ g.project-counter,
   animation: none !important;
 }
 
+/* Add splitting-interaction style to prevent interactions during splitting */
+body.project-creation-in-progress,
+body.task-split-in-progress {
+  pointer-events: auto !important;
+}
+
+/* Style for task split in progress state */
+body.task-split-in-progress::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  z-index: 100;
+  pointer-events: auto;
+}
+
 /* Apply transform lock ONLY if strictly locked */
 body.transform-locked-strict .transform-group {
   transform: translate(var(--initial-transform-x, 0px), var(--initial-transform-y, 0px)) 
@@ -369,22 +390,32 @@ svg text {
   pointer-events: none;
 }
 
-.layer-connections path,
-.layer-connections circle {
-  pointer-events: none;
+/* Project item */
+.project-item {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+  transition: background-color 0.2s ease;
 }
 
-.layer-content {
-  pointer-events: all;
+.project-item:hover {
+  background-color: #f5f5f5;
 }
 
-.layer-controls {
-  pointer-events: all;
+.project-item.active,
+.project-item.project-selected,
+[data-selected="true"].project-item,
+div[data-project-id][data-selected="true"] {
+  background-color: #e5e7eb !important; /* bg-gray-200 equivalent with higher specificity */
+  font-weight: 600;
 }
 
-/* Avoid text selection during interactions */
-.workspace-visual {
-  user-select: none;
+/* Ensure project selection is never overridden */
+.project-list [data-selected="true"],
+.project-list div[data-selected="true"],
+[data-project-list] [data-selected="true"] {
+  background-color: #e5e7eb !important;
 }
 
 /* Disable transitions during project switching */

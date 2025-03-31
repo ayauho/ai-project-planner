@@ -26,10 +26,10 @@ html body [data-side-panel="true"] {
   border-right: 1px solid #e5e7eb !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   overflow: hidden !important;
-  transition-property: transform, width, opacity !important;
+  transition-property: transform, width !important;
   transition-duration: var(--panel-transition-duration) !important;
   transition-timing-function: var(--panel-transition-timing) !important;
-  will-change: transform, width, opacity !important;
+  will-change: transform, width !important;
   opacity: 1 !important;
 }
 
@@ -52,10 +52,10 @@ html body [data-side-panel="true"][data-state="expanded"] {
   box-sizing: border-box !important;
 }
 
-/* Main content positioning - no leftover margin! */
+/* Main content positioning - default (no padding) */
 [data-main-content="true"] {
-  margin-left: 0 !important; /* No margin - main content should take full width */
-  padding-left: 42px !important; /* Instead use padding equal to collapsed panel width */
+  margin-left: 0 !important; 
+  padding-left: 0 !important; /* Default: no padding (for project view) */
   transition: padding-left var(--panel-transition-duration) var(--panel-transition-timing);
   will-change: padding-left;
   position: relative;
@@ -65,8 +65,13 @@ html body [data-side-panel="true"][data-state="expanded"] {
   width: 100% !important;
 }
 
-/* Main content padding when panel is expanded */
-body:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
+/* Apply padding only when in project creation mode */
+body[data-project-creation-mode="true"] [data-main-content="true"] {
+  padding-left: var(--side-panel-collapsed-width) !important; /* Only apply padding in project creation mode */
+}
+
+/* Main content padding when panel is expanded in project creation mode */
+body[data-project-creation-mode="true"]:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
   padding-left: var(--side-panel-expanded-width) !important;
 }
 
@@ -207,13 +212,13 @@ div[data-project-creation-container="true"] {
     opacity: 0.5 !important;
   }
   
-  /* Main content padding for mobile */
-  [data-main-content="true"] {
+  /* Main content padding for mobile in project creation mode */
+  body[data-project-creation-mode="true"] [data-main-content="true"] {
     padding-left: var(--side-panel-collapsed-mobile-width) !important;
   }
   
-  /* Content margin when panel is expanded on mobile */
-  body:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
+  /* Content padding when panel is expanded on mobile in project creation mode */
+  body[data-project-creation-mode="true"]:has([data-side-panel="true"][data-state="expanded"]) [data-main-content="true"] {
     padding-left: var(--side-panel-expanded-width) !important;
   }
   
@@ -239,16 +244,7 @@ div[data-project-creation-container="true"] {
 }
 
 /* Mobile view applied by device detection logic */
-body[data-mobile-view="true"] [data-side-panel="true"][data-state="collapsed"] {
-  width: var(--side-panel-collapsed-mobile-width) !important;
-  opacity: 0.5 !important;
-}
-
-body[data-mobile-view="true"] [data-side-panel="true"][data-state="expanded"] {
-  opacity: 1 !important;
-}
-
-body[data-mobile-view="true"] [data-main-content="true"] {
+body[data-mobile-view="true"][data-project-creation-mode="true"] [data-main-content="true"] {
   padding-left: var(--side-panel-collapsed-mobile-width) !important;
 }
 

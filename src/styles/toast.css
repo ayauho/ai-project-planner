@@ -1,0 +1,35 @@
+/* Toast notification styles */
+
+/* Ensure error notifications are visible */
+.bg-red-50 {
+  background-color: #fee2e2 !important;
+  border-color: #fecaca !important;
+}
+
+/* Animation for notification appearance */
+@keyframes toast-in {
+  from { 
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: toast-in 0.3s ease-out forwards;
+}
+
+/* Make sure notifications are visible */
+.fixed.z-\[9999\] {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+/* Toast positioning */
+.fixed.bottom-4.right-4 {
+  bottom: 1rem !important;
+  right: 1rem !important;
+}

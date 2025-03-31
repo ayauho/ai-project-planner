@@ -53,6 +53,15 @@ const WorkspaceArea = () =>{
     };
   }, [sidePanelState]);
 
+  // Set data attribute on body to indicate project creation state
+  useEffect(() => {
+    if (state.showProjectCreation) {
+      document.body.setAttribute('data-project-creation-mode', 'true');
+    } else {
+      document.body.removeAttribute('data-project-creation-mode');
+    }
+  }, [state.showProjectCreation]);
+
   useEffect(() =>{
     // Check if we're in a project selection transition
     const isInTransition = 
@@ -202,7 +211,6 @@ const WorkspaceArea = () =>{
           className="flex justify-center overflow-x-hidden w-full"
           data-project-creation-container="true"
           style={{ 
-            marginLeft: '0px', // Remove left margin completely
             width: '100%',
             boxSizing: 'border-box',
             padding: '0px 10px 0px 10px' // Add small padding on both sides

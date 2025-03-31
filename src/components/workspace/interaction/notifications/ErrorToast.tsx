@@ -1,20 +1,38 @@
 'use client';
-import React from 'react';
-import { ErrorNotificationProps } from './types';
-import { logger } from '@/lib/client/logger';
-import { Toast } from '@/components/ui/toast';
+
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export const ErrorNotification: React.FC<ErrorNotificationProps> = ({
+interface ErrorToastProps {
+  title: string;
+  message: string;
+  onClose?: () => void;
+}
+
+export const ErrorToast: React.FC<ErrorToastProps> = ({
   title,
   message,
-  duration = 7000,
   onClose
 }) => {
+  // Auto-close the toast after the specified duration
+  useEffect(() => {
+    if (onClose) {
+      // Auto-dismiss after 7 seconds
+      const timer = setTimeout(() => {
+        onClose();
+      }, 7000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [onClose]);
+
   return (
     <div className="w-full rounded-lg border-2 border-red-200 bg-red-50 text-red-800 p-4 pr-8 shadow-md relative">
+      {/* Error title */}
       <div className="font-semibold">{title}</div>
+      {/* Error message */}
       <div className="text-sm mt-1">{message}</div>
+      {/* Close button */}
       {onClose && (
         <button
           onClick={onClose}

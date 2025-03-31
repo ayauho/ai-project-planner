@@ -4,21 +4,24 @@ import SidePanel from './side-panel';
 import WorkspaceArea from './area';
 import WorkspaceInitializer from './initializer';
 import { logger } from '@/lib/client/logger';
-import { initMobileDetection } from '@/lib/client/utils/device-detection';interface WorkspaceLayoutProps {
+import { initMobileDetection } from '@/lib/client/utils/device-detection';
+import { ErrorNotificationProvider } from './providers/ErrorNotificationProvider';
+
+interface WorkspaceLayoutProps {
   user: {
     _id: string;
     nickname: string;
   } | null;
-  onSignOut: () =>void;
+  onSignOut: () => void;
 }
 
-const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
+const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) => {
   const [mounted, setMounted] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
   const [sidePanelState, setSidePanelState] = useState<'expanded' | 'collapsed' | 'initial'>('initial');
 
   // Handle initial mount and toggle events
-  useEffect(() =>{
+  useEffect(() => {
     setMounted(true);
     logger.info('Workspace layout mounted', {}, 'workspace layout ui');
     
@@ -26,7 +29,7 @@ const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
     const cleanupMobileDetection = initMobileDetection();
     
     // Listen for side panel toggle events
-    const handleSidePanelToggle = (_event: CustomEvent) =>{
+    const handleSidePanelToggle = (_event: CustomEvent) => {
       setSidePanelState(_event.detail.isCollapsed ? 'collapsed' : 'expanded');
     };
     
@@ -62,7 +65,7 @@ const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
       setSidePanelState('expanded'); // Fallback to expanded
     }
     
-    return () =>{
+    return () => {
       window.removeEventListener('side-panel-toggle-complete', handleSidePanelToggle as EventListener);
       window.removeEventListener('project-selected', handleProjectSelected);
       if (cleanupMobileDetection) cleanupMobileDetection();
@@ -70,8 +73,8 @@ const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
   }, [sidePanelState]);
   
   // Handle window resize events
-  useEffect(() =>{
-    const handleResize = () =>{
+  useEffect(() => {
+    const handleResize = () => {
       if (mainContentRef.current) {
         // Force recalculation on resize
         mainContentRef.current.style.display = 'none';
@@ -83,7 +86,7 @@ const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
     
     window.addEventListener('resize', handleResize);
     
-    return () =>{
+    return () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
@@ -92,18 +95,44 @@ const WorkspaceLayout = ({ user, onSignOut }: WorkspaceLayoutProps) =>{
     return null;
   }
 
-  return (<div className="flex flex-col h-screen overflow-hidden">{/* Header */}<header className="p-2 bg-white border-b flex justify-between items-center h-[60px] z-30 relative"><h1 className="text-xl">AI Project Planner</h1><div className="flex gap-2 items-center">{user && (<div className="text-sm text-gray-600 mr-2">Welcome, {user.nickname}</div>)}<button 
-            onClick={onSignOut}
-            className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-          >Sign Out</button></div></header>{/* Content area - side panel is fixed position, not part of the flow */}<div className="flex-1 h-[calc(100vh-60px)] overflow-hidden relative">{/* Render side panel outside normal flow */}
-        {user && (<SidePanel userId={user._id} />)}
+  return (
+    <ErrorNotificationProvider>
+      <div className="flex flex-col h-screen overflow-hidden">
+        {/* Header */}
+        <header className="p-2 bg-white border-b flex justify-between items-center h-[60px] z-30 relative">
+          <h1 className="text-xl">AI Project Planner</h1>
+          <div className="flex gap-2 items-center">
+            {user && (
+              <div className="text-sm text-gray-600 mr-2">Welcome, {user.nickname}</div>
+            )}
+            <button 
+              onClick={onSignOut}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+            >
+              Sign Out
+            </button>
+          </div>
+        </header>
         
-        {/* Main content with margin to account for side panel */}<main 
-          ref={mainContentRef}
-          className="w-full h-full overflow-auto flex flex-col"
-          style={{ padding: "3px" }}
-          data-main-content="true"
-        ><WorkspaceInitializer /><WorkspaceArea /></main></div></div>);
+        {/* Content area - side panel is fixed position, not part of the flow */}
+        <div className="flex-1 h-[calc(100vh-60px)] overflow-hidden relative">
+          {/* Render side panel outside normal flow */}
+          {user && (<SidePanel userId={user._id} />)}
+          
+          {/* Main content with margin to account for side panel */}
+          <main 
+            ref={mainContentRef}
+            className="w-full h-full overflow-auto flex flex-col"
+            style={{ padding: "3px" }}
+            data-main-content="true"
+          >
+            <WorkspaceInitializer />
+            <WorkspaceArea />
+          </main>
+        </div>
+      </div>
+    </ErrorNotificationProvider>
+  );
 };
 
 export default WorkspaceLayout;

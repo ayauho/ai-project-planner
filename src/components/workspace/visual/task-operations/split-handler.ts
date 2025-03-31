@@ -1,23 +1,23 @@
 'use client';
-
 import { logger } from '@/lib/client/logger';
 import { taskGenerator } from '@/lib/task/operations/client';
 import { Task } from '@/lib/task/types';
 import { workspaceStateManager } from '@/lib/workspace/state/manager';
 import { TaskEventEmitter } from '@/lib/client/visual/task/events';
 import { taskStateCoordinator } from '../task-hierarchy/state-coordinator';
+import { aiErrorConnector } from '@/lib/client/error-connector';
 
 // Add TypeScript declaration for window.saveWorkspaceState
 declare global {
   interface Window {
-    saveWorkspaceState?: () => void;
+    saveWorkspaceState?: () =>void;
   }
 }
 
 /**
  * Handles task splitting operations and related animations
  */
-export async function splitHandler(taskId: string): Promise<void> {
+export async function splitHandler(taskId: string): Promise<void>{
   // Skip if the click was on a counter (safety check)
   const isCounterClick = document.activeElement?.classList.contains('counter-display') || 
                          document.activeElement?.classList.contains('project-counter') ||
@@ -31,6 +31,15 @@ export async function splitHandler(taskId: string): Promise<void> {
   logger.info('Starting task split operation', { taskId }, 'task-split start');
 
   try {
+    // Add operation tracking class to prevent duplicate operations
+    if (document.body.classList.contains('task-split-in-progress')) {
+      logger.warn('Split operation already in progress', { taskId }, 'task-split safety');
+      return;
+    }
+    
+    // Mark split operation as in progress
+    document.body.classList.add('task-split-in-progress');
+    
     // Emit split event to signal the beginning of the operation
     TaskEventEmitter.getInstance().emit({
       taskId,
@@ -39,7 +48,7 @@ export async function splitHandler(taskId: string): Promise<void> {
 
     // Get task data to build ancestor chain
     const state = workspaceStateManager.getState();
-    const task = state.tasks.find(t => t._id?.toString() === taskId);
+    const task = state.tasks.find(t =>t._id?.toString() === taskId);
 
     if (!task) {
       throw new Error(`Task not found: ${taskId}`);
@@ -103,17 +112,29 @@ export async function splitHandler(taskId: string): Promise<void> {
       error: error instanceof Error ? error.message : String(error) 
     }, 'task-split error');
     
-    // Emit error event
-    TaskEventEmitter.getInstance().emit({
-      taskId,
-      type: 'error',
-      data: {
-        error: error instanceof Error ? error.message : String(error),
-        operation: 'split'
-      }
-    });
+    // Emit error event - but only do this once to avoid duplicate error messages
+    // We'll rely on the error connector for UI notifications
+    try {
+      aiErrorConnector.reportAIError(
+        error instanceof Error ? error.message : String(error),
+        'split'
+      );
+    } catch (reportError) {
+      // If error connector fails, fall back to task event emitter
+      TaskEventEmitter.getInstance().emit({
+        taskId,
+        type: 'error',
+        data: {
+          error: error instanceof Error ? error.message : String(error),
+          operation: 'split'
+        }
+      });
+    }
     
     throw error;
+  } finally {
+    // Always remove the in-progress class, even if there was an error
+    document.body.classList.remove('task-split-in-progress');
   }
 }
 
@@ -125,7 +146,7 @@ export function getAncestorChain(task: Task, tasks: Task[]): Task[] {
   let currentTask = task;
 
   while (currentTask.parentId) {
-    const parent = tasks.find(t => t._id && t._id.toString() === currentTask.parentId?.toString());
+    const parent = tasks.find(t =>t._id && t._id.toString() === currentTask.parentId?.toString());
     if (!parent) break;
 
     ancestors.push(parent);

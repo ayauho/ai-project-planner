@@ -266,6 +266,25 @@ const ProjectSelector = ({ className = '', onProjectSelect, userId, sortBy = 'la
       // First update the selected ID for immediate visual feedback
       setSelectedId(id);
       
+      // Also update the DOM directly for a faster visual update
+      try {
+        const projectElements = document.querySelectorAll('[data-project-id]');
+        projectElements.forEach(element => {
+          if (element.getAttribute('data-project-id') === id) {
+            element.setAttribute('data-selected', 'true');
+            element.classList.add('project-selected', 'active');
+          } else {
+            element.setAttribute('data-selected', 'false');
+            element.classList.remove('project-selected', 'active');
+          }
+        });
+      } catch (uiError) {
+        // Ignore UI errors - state will still be updated properly
+        logger.debug('Error updating project selection UI', { 
+          error: uiError instanceof Error ? uiError.message : String(uiError)
+        }, 'project selector ui');
+      }
+      
       // Save current project state before switching
       // This ensures we don't lose any changes when switching projects
       const currentState = workspaceStateManager.getState();

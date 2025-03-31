@@ -5,6 +5,7 @@ import { splitHandler } from '@/components/workspace/visual/task-operations/spli
 import { logger } from '@/lib/client/logger';
 import { TaskEventEmitter } from '@/lib/client/visual/task/events';
 import { workspaceStateManager } from '@/lib/workspace/state/manager';
+import { aiErrorConnector } from '@/lib/client/error-connector';
 
 interface TaskOperation {
   taskId: string | null;
@@ -37,6 +38,16 @@ export const useTaskOperations = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to split task';
       logger.error('Split operation failed', { taskId, error }, 'task operations split error');
+      
+      // Also report through error connector
+      try {
+        aiErrorConnector.reportAIError(
+          error instanceof Error ? error.message : String(error),
+          'split'
+        );
+      } catch (reportError) {
+        // Ignore errors from the reporting mechanism
+      }
       
       setSplitOperation({
         taskId,
@@ -212,10 +223,20 @@ export const useTaskOperations = () => {
         taskId,
         type: 'error',
         data: {
-          error: errorMessage,
+          error: error instanceof Error ? error.message : String(error),
           operation: 'delete'
         }
       });
+      
+      // Also report through error connector
+      try {
+        aiErrorConnector.reportAIError(
+          error instanceof Error ? error.message : String(error),
+          'delete'
+        );
+      } catch (reportError) {
+        // Ignore errors from the reporting mechanism
+      }
       
       setDeleteOperation({
         taskId,

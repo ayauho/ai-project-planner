@@ -7,6 +7,8 @@ import { workspaceStateManager } from '@/lib/workspace/state/manager';
 import { domInspector } from '@/lib/client/visual/utils/dom-inspector';
 import { svgAnimator } from '@/lib/client/visual/utils/svg-animator';
 import { taskGenerator } from '@/lib/task/operations/client';
+import { createApiKeyManager, defaultConfig, getUserApiKeyStorageKey } from '@/lib/ai/config';
+import { authStorage } from '@/lib/client/auth/storage';
 
 /**
  * Interface for the rectangle data used for element centering
@@ -38,11 +40,80 @@ declare global {
 export class TaskControlEventDispatcher {
   private static instance: TaskControlEventDispatcher;
   private taskOperations: ReturnType<typeof useTaskOperations>| null = null;
+  private isCheckingApiKey: boolean = false;
 
   private constructor() {
     // Enable debug mode for DOM inspector and animator
     domInspector.setDebug(false);
     svgAnimator.setDebug(false);
+  }
+  
+  /**
+   * Checks if an API key is available
+   * @returns Promise that resolves to true if API key exists, false otherwise
+   */
+  private async checkApiKey(): Promise<boolean> {
+    try {
+      // Use a semaphore to prevent concurrent checks
+      if (this.isCheckingApiKey) {
+        logger.debug('API key check already in progress, returning false', {}, 'api-key operation-check');
+        return false;
+      }
+      
+      // Mark check as in progress
+      this.isCheckingApiKey = true;
+      
+      // First check if body has API key class - fastest check
+      if (document.body.classList.contains('has-api-key')) {
+        logger.debug('API key present based on body class', {}, 'api-key operation-check');
+        this.isCheckingApiKey = false;
+        return true;
+      }
+      
+      if (document.body.classList.contains('no-api-key')) {
+        logger.debug('No API key present based on body class', {}, 'api-key operation-check');
+        this.isCheckingApiKey = false;
+        return false;
+      }
+      
+      // Get user ID from session
+      const session = await authStorage.getSession();
+      const userId = session?.user?._id;
+      
+      if (!userId) {
+        logger.warn('No user ID available for API key check', {}, 'api-key operation-check');
+        this.isCheckingApiKey = false;
+        return false;
+      }
+      
+      // Use user-specific storage key
+      const userConfig = {
+        ...defaultConfig,
+        storageKey: getUserApiKeyStorageKey(userId)
+      };
+      
+      const apiKeyManager = createApiKeyManager(userConfig);
+      const key = await apiKeyManager.getKey();
+      
+      const hasKey = !!key;
+      
+      // Update the body class for future fast checks
+      if (hasKey) {
+        document.body.classList.add('has-api-key');
+        document.body.classList.remove('no-api-key');
+      } else {
+        document.body.classList.remove('has-api-key');
+        document.body.classList.add('no-api-key');
+      }
+      
+      logger.debug(`API key check complete, key ${hasKey ? 'exists' : 'does not exist'}`, {}, 'api-key operation-check');
+      this.isCheckingApiKey = false;
+      return hasKey;
+    } catch (error) {
+      logger.error('Error checking API key', { error }, 'api-key operation-check');
+      this.isCheckingApiKey = false;
+      return false;
+    }
   }
 
   public static getInstance(): TaskControlEventDispatcher {
@@ -64,6 +135,26 @@ export class TaskControlEventDispatcher {
       }
 
       logger.info('Handling split event', { taskId }, 'task-controls split');
+      
+      // Check if API key exists before proceeding
+      const hasApiKey = await this.checkApiKey();
+      if (!hasApiKey) {
+        const error = new Error('API key is required for split operation');
+        logger.error('Cannot split task - no API key', { taskId }, 'api-key operation-check');
+        
+        // Emit error event
+        TaskEventEmitter.getInstance().emit({
+          taskId,
+          type: 'error',
+          data: {
+            operation: 'split',
+            error
+          }
+        });
+        
+        throw error;
+      }
+      
       await this.taskOperations.handleSplit(taskId);
       logger.info('Split event handled successfully', { taskId }, 'task-controls split');
 
@@ -76,6 +167,25 @@ export class TaskControlEventDispatcher {
   async handleRegenerate(taskId: string): Promise<void>{
     try {
       logger.info('Handling regenerate event', { taskId }, 'task-controls regenerate');
+      
+      // Check if API key exists before proceeding
+      const hasApiKey = await this.checkApiKey();
+      if (!hasApiKey) {
+        const error = new Error('API key is required for regenerate operation');
+        logger.error('Cannot regenerate task - no API key', { taskId }, 'api-key operation-check');
+        
+        // Emit error event
+        TaskEventEmitter.getInstance().emit({
+          taskId,
+          type: 'error',
+          data: {
+            operation: 'regenerate',
+            error
+          }
+        });
+        
+        throw error;
+      }
       
       // Emit regenerate event to notify the system
       TaskEventEmitter.getInstance().emit({
