@@ -14,6 +14,8 @@
 @import './no-nested-css.css';
 @import "./api-key-controls.css";
 @import "./toast.css";
+@import './overlap-control.css';
+@import './opacity-levels.css';
 
 /* Tailwind directives come after imports */
 @tailwind base;
@@ -256,6 +258,44 @@ body.first-zoom-attempt .transform-group {
 .counter-display,
 [data-project-counter="true"] {
   pointer-events: none !important;
+}
+
+/* Graduated opacity styles for ancestor chain */
+.task-group[data-state^="opacity-"],
+.project-group[data-state^="opacity-"] {
+  /* Opacity is applied directly via style attribute and transition */
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Connection opacity handling */
+.connection-group[data-opacity] {
+  /* Custom opacity transitions for connections */
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Control elements with custom opacity - high-specificity selectors to override defaults */
+.task-control[data-opacity],
+.task-split-button[data-opacity],
+g[data-opacity],
+svg .task-control[data-opacity],
+svg .task-split-button[data-opacity],
+.layer-controls g[data-opacity],
+html body svg g.task-control[data-opacity],
+html body svg g.task-split-button[data-opacity] {
+  transition: opacity 0.2s ease-out !important;
+}
+
+/* Connection opacity - high-specificity selectors */
+.connection-group[data-opacity],
+svg .connection-group[data-opacity],
+.layer-connections .connection-group[data-opacity],
+html body svg g.connection-group[data-opacity] {
+  transition: opacity 0.2s ease-out !important;
+}
+
+/* Additional fix to ensure SVG elements respect opacity */
+svg [style*="opacity"] {
+  transition: opacity 0.2s ease-out !important;
 }
 
 /* Stabilize SVG during side panel transitions */

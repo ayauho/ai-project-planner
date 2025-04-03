@@ -2,7 +2,20 @@
   "hide-all": false,
   "show-by-keyword": {
     "works": false,
-    "keywords": []
+    "keywords": 
+    [
+      "controls",
+      "overlap-detector",
+      "task-hierarchy",
+      "controls visibility", 
+      "controls visibility error", 
+      "controls visibility levels",
+      "overlap-detector visibility",
+      "overlap-detector check", 
+      "overlap-detector error",
+      "task-hierarchy visibility",
+      "overlapping-example"
+    ]
   },
   "hide-by-keyword": {
     "works": false,

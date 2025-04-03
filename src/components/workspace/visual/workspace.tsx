@@ -67,9 +67,9 @@ export const WorkspaceVisual: React.FC<WorkspaceVisualProps>= ({
   const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true);
   
   // Detect mobile device on initial render
-  useEffect(() => {
-    const detectMobileDevice = () => {
-      const isMobileDevice = window.innerWidth <= 768 || 
+  useEffect(() =>{
+    const detectMobileDevice = () =>{
+      const isMobileDevice = window.innerWidth<= 768 || 
                            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobileDevice) {
@@ -87,7 +87,7 @@ export const WorkspaceVisual: React.FC<WorkspaceVisualProps>= ({
     window.addEventListener('resize', detectMobileDevice);
     
     // Clean up
-    return () => window.removeEventListener('resize', detectMobileDevice);
+    return () =>window.removeEventListener('resize', detectMobileDevice);
   }, []);
 
   const { setBounds } = useWorkspaceStore();
@@ -111,7 +111,8 @@ export const WorkspaceVisual: React.FC<WorkspaceVisualProps>= ({
   }, []);
 
   const taskRenderer = new TaskRectangleRenderer(DEFAULT_TASK_CONFIG);
-  const layoutManager = createCircularLayoutManager();  // Handle when the workspace is ready to show (transform properly applied)
+  const layoutManager = createCircularLayoutManager();  
+  
   // Handle when the workspace is ready to show (transform properly applied)
   const handleWorkspaceReady = () =>{
     setIsWorkspaceLoading(false);
@@ -250,7 +251,7 @@ useEffect(() =>{
     }
     
     // Mark workspace as stable after a longer delay to ensure complete stabilization
-    setTimeout(() => {
+    setTimeout(() =>{
       // First remove prohibition classes
       document.body.classList.remove('transform-initializing', 'transform-interaction-prohibited');
       document.documentElement.classList.remove('prevent-selection');
@@ -259,9 +260,9 @@ useEffect(() =>{
       document.body.classList.add('transform-stable');
       
       // Only make elements visible after a slight additional delay
-      setTimeout(() => {
+      setTimeout(() =>{
         // Make all elements visible again - with a longer fade-in
-        document.querySelectorAll('.task-rect, .project-rect, .counter-display, .connection-line, svg g').forEach(el => {
+        document.querySelectorAll('.task-rect, .project-rect, .counter-display, .connection-line, svg g').forEach(el =>{
           (el as HTMLElement).style.visibility = 'visible';
           (el as HTMLElement).style.opacity = '1';
           (el as HTMLElement).style.transition = 'opacity 0.3s ease-out';
@@ -304,7 +305,7 @@ useEffect(() =>{
       document.body.classList.remove('transform-initializing', 'transform-stable');
     };
   }
-}, [dimensions.width, dimensions.height, initializeZoom, isInitialized]);
+}, [dimensions.width, dimensions.height, initializeZoom, isInitialized, isWorkspaceLoading]);
 
   // Apply counter handler to ensure counters are not clickable
   // and verify control positions on mobile
@@ -313,9 +314,9 @@ useEffect(() =>{
     counterHandler.disableAllCounters();
     
     // Function to verify and fix control positions on mobile
-    const verifyControlPositions = () => {
+    const verifyControlPositions = () =>{
       const isMobile = document.body.getAttribute('data-mobile-view') === 'true' || 
-                       window.innerWidth <= 768;
+                       window.innerWidth<= 768;
       
       if (isMobile) {
         logger.debug('Verifying control positions on mobile device', {}, 'workspace control');
@@ -324,7 +325,7 @@ useEffect(() =>{
         const splitButtons = document.querySelectorAll('.task-split-button[data-task-id]');
         
         // Process each control
-        splitButtons.forEach(button => {
+        splitButtons.forEach(button =>{
           // Mark as mobile for CSS targeting
           button.setAttribute('data-mobile', 'true');
           
@@ -360,11 +361,11 @@ useEffect(() =>{
     window.addEventListener(WORKSPACE_STATE_VISUAL_READY_EVENT, handleStateRestored);
     
     // Also verify positions after viewport changes
-    window.addEventListener('resize', () => {
+    window.addEventListener('resize', () =>{
       setTimeout(verifyControlPositions, 300);
     });
     
-    window.addEventListener('orientationchange', () => {
+    window.addEventListener('orientationchange', () =>{
       setTimeout(verifyControlPositions, 500);
     });
     
@@ -420,7 +421,7 @@ useEffect(() =>{
         taskOps
       );
     }
-  }, []);
+  }, [taskOps]);
 
   // Handle project and task selection
   const _handleSelection = useCallback((taskId: string, rect?: DOMRect) =>{
@@ -449,10 +450,14 @@ useEffect(() =>{
     }, 'workspace selection');
     
     // NOTE: This handler should mostly be unused now as the task/project rectangles
-    // call the taskStateCoordinator directly. This remains as a fallback.      // Save state after selection
-      setTimeout(() =>{
-        saveState();
-      }, 100);// Ensure counters are non-interactive
+    // call the taskStateCoordinator directly. This remains as a fallback.
+    
+    // Save state after selection
+    setTimeout(() =>{
+      saveState();
+    }, 100);
+    
+    // Ensure counters are non-interactive
     setTimeout(() =>{
       counterHandler.disableAllCounters();
     }, 200);
@@ -710,6 +715,44 @@ useEffect(() =>{
     const state = workspaceStateManager.getState();
     return state.taskVisualStates.get(taskId) || 'active';
   };
+  
+  // Helper functions to safely check task state types WITHOUT changing calculated opacity values
+  const isHiddenState = (state: TaskVisualState): boolean => {
+    return state === 'hidden' || 
+           (typeof state === 'string' && 
+            state.startsWith('opacity-') && 
+            parseFloat(state.replace('opacity-', '')) <= 0);
+  };
+  
+  // Check if this is a semi-transparent state (any form) for TYPE checking only
+  const isSemiTransparentState = (state: TaskVisualState): boolean => {
+    return state === 'semi-transparent' || 
+           (typeof state === 'string' && 
+            state.startsWith('opacity-') && 
+            parseFloat(state.replace('opacity-', '')) > 0 && 
+            parseFloat(state.replace('opacity-', '')) < 1);
+  };
+  
+  const isActiveState = (state: TaskVisualState): boolean => {
+    return state === 'active' || 
+           (typeof state === 'string' && 
+            state.startsWith('opacity-') && 
+            parseFloat(state.replace('opacity-', '')) >= 1);
+  };
+  
+  // CRITICAL: Get the EXACT opacity value without rounding to standard values
+  // This preserves the graduated opacity values (0.5, 0.25, 0.125, etc.)
+  const getOpacityValue = (state: TaskVisualState): number => {
+    if (state === 'active') return 1;
+    if (state === 'semi-transparent') return 0.5;
+    if (state === 'hidden') return 0;
+    if (typeof state === 'string' && state.startsWith('opacity-')) {
+      // Extract the exact opacity value without rounding to preset values
+      const value = parseFloat(state.replace('opacity-', ''));
+      return isNaN(value) ? 0.5 : Math.max(0, Math.min(1, value));
+    }
+    return 1; // Default to fully visible
+  };
 
   // Calculate task counts
   const calculateTaskCounts = (tasks: Task[]): Record<string, { childrenCount: number; descendantCount: number }>=>{
@@ -901,15 +944,36 @@ useEffect(() =>{
 
       // Get project counts and state
       const projectCounts = allCounts[projectId] || { childrenCount: 0, descendantCount: 0 };
-      const projectState = state.taskVisualStates.get(projectId) || 'active';
+      // Need to handle custom opacity states - we'll use a safe type assertion
+      let projectState = state.taskVisualStates.get(projectId) || 'active';
       
-      // Create project data
+      // Convert any opacity-based custom state to standard state for initial rendering
+      // This simplifies the initial render while still supporting the custom states elsewhere
+      let standardProjectState: 'active' | 'semi-transparent' | 'hidden' = 'active';
+      
+      if (typeof projectState === 'string' && projectState.startsWith('opacity-')) {
+        const opacityValue = parseFloat(projectState.replace('opacity-', ''));
+        // Choose the standard state based on opacity value
+        standardProjectState = opacityValue <= 0 ? 'hidden' : 
+                              opacityValue < 0.8 ? 'semi-transparent' : 'active';
+        
+        logger.debug('Converted custom project opacity state to standard state', {
+          projectId,
+          originalState: projectState,
+          opacityValue,
+          standardState: standardProjectState
+        }, 'workspace opacity-conversion');
+      } else if (projectState === 'active' || projectState === 'semi-transparent' || projectState === 'hidden') {
+        standardProjectState = projectState;
+      }
+      
+      // Create project data with standard state for rendering
       const projectRectData: TaskRect = {
         id: projectId,
         type: 'task',
         position: projectPosition,
         dimensions: { width: PROJECT_WIDTH, height: PROJECT_HEIGHT },
-        state: projectState,
+        state: standardProjectState,
         text: {
           title: state.selectedProject.name,
           description: state.selectedProject.description
@@ -940,7 +1004,7 @@ useEffect(() =>{
       }
 
       // Create project counter
-      if (layers.controls && projectCounts.childrenCount >0) {
+      if (layers.controls && projectCounts.childrenCount > 0) {
         layers.controls.updateProjectCounter({
           projectId,
           x: projectPosition.x,
@@ -949,7 +1013,7 @@ useEffect(() =>{
           height: PROJECT_HEIGHT,
           childrenCount: projectCounts.childrenCount,
           descendantCount: projectCounts.descendantCount,
-          state: projectState
+          state: standardProjectState
         });
         
         // Add sr-pending class if restoring state
@@ -975,7 +1039,7 @@ useEffect(() =>{
 
         // Process all task elements
         layoutedElements.forEach((element) =>{
-          const task = state.tasks.find(t =>t._id && t._id.toString() === element.id);
+          const task = state.tasks.find(t => t._id && t._id.toString() === element.id);
           if (!task || !element.position || !task._id) {
             return;
           }
@@ -984,7 +1048,7 @@ useEffect(() =>{
           const taskState = getTaskState(taskId);
 
           // Add task to appropriate visibility set
-          if (taskState === 'hidden') {
+          if (isHiddenState(taskState)) {
             hiddenTasks.add(taskId);
             return;
           } else {
@@ -1000,8 +1064,10 @@ useEffect(() =>{
           };
 
           // Calculate opacity and z-index based on state
-          const opacity = taskState === 'semi-transparent' ? 0.5 : 1;
-          const zIndex = taskState === 'active' ? 5 : 3;
+          const opacity = getOpacityValue(taskState);
+          
+          // Determine z-index based on state
+          const zIndex = isActiveState(taskState) ? 5 : 3;
 
           // Get task parent
           const parent = getTaskParent(task, state.tasks);
@@ -1014,8 +1080,8 @@ useEffect(() =>{
               const parentState = getTaskState(parentId);
 
               // Only draw connections between visible elements
-              if (parentState !== 'hidden') {
-                const parentElement = layoutedElements.find(e =>e.id === parentId);
+              if (!isHiddenState(parentState)) {
+                const parentElement = layoutedElements.find(e => e.id === parentId);
 
                 if (parentElement?.position) {
                   const parentRect = {
@@ -1026,7 +1092,7 @@ useEffect(() =>{
                   };
 
                   // Set connection opacity based on task state
-                  const connectionOpacity = taskState === 'semi-transparent' ? 0.5 : 1;
+                  const connectionOpacity = opacity;
 
                   // Draw connection
                   const connection = connectionDrawer.drawConnection(
@@ -1071,13 +1137,39 @@ useEffect(() =>{
           // Get task counts
           const taskCounts = allCounts[taskId] || { childrenCount: 0, descendantCount: 0 };
 
-          // Create task rect data
+          // Handle custom opacity states for task rendering
+          // Convert the opacity state to a standard state for task rendering
+          // BUT preserve the original state data for opacity calculations
+          let standardTaskState: 'active' | 'semi-transparent' | 'hidden' = 'active';
+          
+          // Get opacity value - may be exact graduated value (0.5, 0.25, 0.125, etc.)
+          const exactOpacityValue = getOpacityValue(taskState);
+          
+          // For rendering purposes only, map to standard states
+          if (isHiddenState(taskState)) {
+            standardTaskState = 'hidden';
+          } else if (isSemiTransparentState(taskState)) {
+            standardTaskState = 'semi-transparent';
+          } else {
+            standardTaskState = 'active';
+          }
+          
+          // Log the state conversion but including the exact opacity
+          logger.debug('Task state handling for rendering', {
+            taskId,
+            originalState: taskState,
+            exactOpacityValue,
+            standardState: standardTaskState
+          }, 'workspace opacity-handling');
+          
+          // Create task rect data with standard state for rendering
+          // But pass custom data attributes for exact opacity handling
           const taskRectData: TaskRect = {
             id: taskId,
             type: 'task',
             position: element.position,
             dimensions: element.dimensions,
-            state: taskState,
+            state: standardTaskState,
             text: {
               title: task.name,
               description: task.description
@@ -1085,13 +1177,62 @@ useEffect(() =>{
             childrenCount: taskCounts.childrenCount,
             descendantCount: taskCounts.descendantCount,
             parentId: parent && parent._id ? parent._id.toString() : `project-${projectId}`,
-            isPartOfChain: taskState === 'semi-transparent'
+            isPartOfChain: isSemiTransparentState(taskState),
+            // Store the exact opacity value as a custom property
+            // This will be used during rendering to apply the exact opacity
+            exactOpacity: exactOpacityValue
           };
 
-          // Render task
+          // Render task with exact opacity settings
           const taskGroup = taskRenderer.render(contentNode, taskRectData, { 
             animate: shouldAnimate
           });
+          
+          // After rendering, ensure exact opacity is applied for graduated ancestor chain
+          if (taskGroup && isSemiTransparentState(taskState) && typeof taskState === 'string' && taskState.startsWith('opacity-')) {
+            // CRITICAL: Apply the exact opacity in multiple ways to override CSS rules
+            
+            // 1. Apply opacity using D3 selection for type safety
+            const taskSelection = select(taskGroup);
+            taskSelection.style('opacity', exactOpacityValue.toString());
+            
+            // 2. Store the exact opacity value as a data attribute for CSS targeting
+            taskSelection.attr('data-exact-opacity', exactOpacityValue.toString());
+            
+            // 3. Set the custom state attribute instead of "semi-transparent" to avoid CSS overrides
+            // This is critical - we use the original state (opacity-X.XXX) instead of "semi-transparent"
+            taskSelection.attr('data-state', taskState);
+            
+            // 4. Set CSS variable for use in stylesheets (as a string, not a true CSS variable)
+            taskSelection.style('--exact-opacity', exactOpacityValue.toString());
+            
+            // 5. Apply the same opacity to the rectangle element directly
+            const taskRect = taskSelection.select('rect');
+            if (!taskRect.empty()) {
+              // Apply with normal D3 style for type safety
+              taskRect.style('opacity', exactOpacityValue.toString());
+              
+              // Also attempt direct DOM property setting if possible
+              const rectNode = taskRect.node();
+              if (rectNode && rectNode instanceof SVGElement) {
+                rectNode.style.setProperty('opacity', exactOpacityValue.toString(), 'important');
+              }
+            }
+            
+            // 6. Also try direct DOM approach if the node is available
+            const taskNode = taskSelection.node();
+            if (taskNode && (taskNode instanceof SVGElement || taskNode instanceof HTMLElement)) {
+              taskNode.style.setProperty('opacity', exactOpacityValue.toString(), 'important');
+            }
+            
+            logger.debug('Applied exact graduated opacity to task', {
+              taskId,
+              state: taskState,
+              exactOpacity: exactOpacityValue,
+              cssVarSet: true,
+              directStyleSet: true
+            }, 'workspace graduated-opacity');
+          }
 
           if (taskGroup) {
             const taskElement = select(taskGroup);
@@ -1148,228 +1289,235 @@ useEffect(() =>{
         if (stateBeingRestored && restorationPhase === 'loading') {
           // Transition to positioning phase
           beginPositioningPhase();
-        }      // Check if this is a new project that needs centering
-      // Parse the detailed flag if it exists
-      let isNewProject = false;
-      let newProjectData = null;
-      try {
-        const newProjectFlag = sessionStorage.getItem('__new_project_needs_centering');
-        if (newProjectFlag) {
-          if (newProjectFlag === 'true') {
-            // Handle the simple boolean flag for backward compatibility
-            isNewProject = true;
-          } else {
-            // Try to parse as JSON for the enhanced flag
-            newProjectData = JSON.parse(newProjectFlag);
-            isNewProject = !!newProjectData;
-            
-            // Log the detailed project data
-            if (newProjectData) {
-              logger.debug('Found detailed new project data', { 
-                projectId: newProjectData.projectId,
-                timestamp: newProjectData.timestamp,
-                dimensions: newProjectData.dimensions,
-                zoomScale: newProjectData.zoomScale
-              }, 'workspace project');
+        }
+        
+        // Check if this is a new project that needs centering
+        // Parse the detailed flag if it exists
+        let isNewProject = false;
+        let newProjectData = null;
+        
+        try {
+          const newProjectFlag = sessionStorage.getItem('__new_project_needs_centering');
+          if (newProjectFlag) {
+            if (newProjectFlag === 'true') {
+              // Handle the simple boolean flag for backward compatibility
+              isNewProject = true;
+            } else {
+              // Try to parse as JSON for the enhanced flag
+              newProjectData = JSON.parse(newProjectFlag);
+              isNewProject = !!newProjectData;
+              
+              // Log the detailed project data
+              if (newProjectData) {
+                logger.debug('Found detailed new project data', { 
+                  projectId: newProjectData.projectId,
+                  timestamp: newProjectData.timestamp,
+                  dimensions: newProjectData.dimensions,
+                  zoomScale: newProjectData.zoomScale
+                }, 'workspace project');
+              }
             }
           }
+        } catch (error) {
+          // If JSON parsing fails, fall back to simple boolean check
+          isNewProject = !!sessionStorage.getItem('__new_project_needs_centering');
+          logger.warn('Error parsing new project data, falling back to boolean flag', { error }, 'workspace error');
         }
-      } catch (error) {
-        // If JSON parsing fails, fall back to simple boolean check
-        isNewProject = !!sessionStorage.getItem('__new_project_needs_centering');
-        logger.warn('Error parsing new project data, falling back to boolean flag', { error }, 'workspace error');
-      }if (isNewProject && !stateBeingRestored && projectId) {
-                // Add class to hide elements until centered
-                document.body.classList.add('hide-elements-until-centered');
+        
+        if (isNewProject && !stateBeingRestored && projectId) {
+          // Add class to hide elements until centered
+          document.body.classList.add('hide-elements-until-centered');
+          
+          logger.info('New project detected, hiding elements until properly centered', { projectId }, 'workspace project');
+          
+          // Clear the new project centering flag to prevent duplicate processing
+          sessionStorage.removeItem('__new_project_needs_centering');
+          
+          // Use a more direct approach to center correctly
+          setTimeout(async () =>{
+            try {
+              if (!svgRef.current) {
+                logger.warn('SVG element not available for centering', {}, 'workspace error');
+                document.body.classList.remove('hide-elements-until-centered');
+                return;
+              }
+              
+              // Import the dedicated centering calculation function from constants
+              const calculateProjectCenterModule = await import('@/lib/client/layout/constants');
+              const { calculateProjectCenter } = calculateProjectCenterModule;
+              
+              // Get the SVG dimensions
+              const svgRect = svgRef.current.getBoundingClientRect();
+              const svgWidth = svgRect.width;
+              const svgHeight = svgRect.height;
+              
+              // Get the project dimensions
+              const projectWidth = PROJECT_WIDTH;
+              const projectHeight = PROJECT_HEIGHT;
+              
+              // Calculate the center position using the utility function
+              const centerPosition = calculateProjectCenter(
+                svgWidth,
+                svgHeight,
+                projectWidth,
+                projectHeight
+              );
+              
+              logger.info('Calculated centering values for new project', {
+                svgDimensions: { width: svgWidth, height: svgHeight },
+                projectDimensions: { width: projectWidth, height: projectHeight },
+                centerPosition: {
+                  x: centerPosition.x,
+                  y: centerPosition.y,
+                  scale: centerPosition.scale
+                }
+              }, 'workspace transform');
+              
+              // Get transform group
+              const transformGroup = document.querySelector('.transform-group');
+              if (transformGroup) {
+                // First reset the transform to ensure clean application
+                transformGroup.setAttribute('transform', 'translate(0,0) scale(1)');
                 
-                logger.info('New project detected, hiding elements until properly centered', { projectId }, 'workspace project');
+                // Force a reflow to ensure the reset is applied
+                svgRef.current.getBoundingClientRect();
                 
-                // Clear the new project centering flag to prevent duplicate processing
-                sessionStorage.removeItem('__new_project_needs_centering');
+                // Apply the calculated transform
+                const newTransform = `translate(${centerPosition.x}, ${centerPosition.y}) scale(${centerPosition.scale})`;
+                transformGroup.setAttribute('transform', newTransform);
                 
-                // Use a more direct approach to center correctly
-                setTimeout(async () =>{
-                  try {
-                    if (!svgRef.current) {
-                      logger.warn('SVG element not available for centering', {}, 'workspace error');
-                      document.body.classList.remove('hide-elements-until-centered');
-                      return;
-                    }
-                    
-                    // Import the dedicated centering calculation function from constants
-                    const calculateProjectCenterModule = await import('@/lib/client/layout/constants');
-                    const { calculateProjectCenter } = calculateProjectCenterModule;
-                    
-                    // Get the SVG dimensions
-                    const svgRect = svgRef.current.getBoundingClientRect();
-                    const svgWidth = svgRect.width;
-                    const svgHeight = svgRect.height;
-                    
-                    // Get the project dimensions
-                    const projectWidth = PROJECT_WIDTH;
-                    const projectHeight = PROJECT_HEIGHT;
-                    
-                    // Calculate the center position using the utility function
-                    const centerPosition = calculateProjectCenter(
-                      svgWidth,
-                      svgHeight,
-                      projectWidth,
-                      projectHeight
-                    );
-                    
-                    logger.info('Calculated centering values for new project', {
-                      svgDimensions: { width: svgWidth, height: svgHeight },
-                      projectDimensions: { width: projectWidth, height: projectHeight },
-                      centerPosition: {
+                logger.info('Applied calculated transform for new project', {
+                  x: centerPosition.x,
+                  y: centerPosition.y,
+                  scale: centerPosition.scale,
+                  transform: newTransform
+                }, 'workspace transform');
+                
+                // Ensure transform coordinator is updated
+                try {
+                  const coordinator = (window as Window & { 
+                    __transformCoordinator?: { 
+                      setInitialTransform: (transform: { scale: number; translate: { x: number; y: number } }) =>void 
+                    } 
+                  }).__transformCoordinator;
+                  if (coordinator && typeof coordinator.setInitialTransform === 'function') {
+                    coordinator.setInitialTransform({
+                      scale: centerPosition.scale,
+                      translate: {
                         x: centerPosition.x,
-                        y: centerPosition.y,
-                        scale: centerPosition.scale
+                        y: centerPosition.y
                       }
+                    });
+                  }
+                } catch (coordError) {
+                  logger.warn('Error updating transform coordinator', { error: coordError }, 'workspace error');
+                }
+                
+                // Make sure zoom is synchronized
+                if (svgRef.current) {
+                  syncZoomWithTransform(svgRef.current);
+                }
+                
+                // Save state with correct positioning
+                setTimeout(() =>{
+                  if (typeof window.saveWorkspaceState === 'function') {
+                    window.saveWorkspaceState();
+                  }
+                }, 100);
+                
+                // Verify project is centered correctly
+                setTimeout(() =>{
+                  // Find the project element now that it should be rendered
+                  const projectElement = document.getElementById(`project-${projectId}`);
+                  if (projectElement) {
+                    const projectRect = projectElement.getBoundingClientRect();
+                    const projectCenterX = projectRect.left + projectRect.width / 2;
+                    const projectCenterY = projectRect.top + projectRect.height / 2;
+                    const svgCenterX = svgRect.left + svgRect.width / 2;
+                    const svgCenterY = svgRect.top + svgRect.height / 2;
+                    
+                    // Calculate offset from center
+                    const offsetX = Math.abs(svgCenterX - projectCenterX);
+                    const offsetY = Math.abs(svgCenterY - projectCenterY);
+                    
+                    logger.debug('Verifying project centering', {
+                      projectCenter: { x: projectCenterX, y: projectCenterY },
+                      svgCenter: { x: svgCenterX, y: svgCenterY },
+                      offset: { x: offsetX, y: offsetY }
                     }, 'workspace transform');
                     
-                    // Get transform group
-                    const transformGroup = document.querySelector('.transform-group');
-                    if (transformGroup) {
-                      // First reset the transform to ensure clean application
-                      transformGroup.setAttribute('transform', 'translate(0,0) scale(1)');
-                      
-                      // Force a reflow to ensure the reset is applied
-                      svgRef.current.getBoundingClientRect();
-                      
-                      // Apply the calculated transform
-                      const newTransform = `translate(${centerPosition.x}, ${centerPosition.y}) scale(${centerPosition.scale})`;
-                      transformGroup.setAttribute('transform', newTransform);
-                      
-                      logger.info('Applied calculated transform for new project', {
-                        x: centerPosition.x,
-                        y: centerPosition.y,
-                        scale: centerPosition.scale,
-                        transform: newTransform
+                    // Apply correction if needed (offset is too large)
+                    if (offsetX > 5 || offsetY > 5) {
+                      logger.info('Applying centering correction, project not precisely centered', {
+                        offsetX,
+                        offsetY
                       }, 'workspace transform');
                       
-                      // Ensure transform coordinator is updated
-                      try {
-                        const coordinator = (window as Window & { 
-                          __transformCoordinator?: { 
-                            setInitialTransform: (transform: { scale: number; translate: { x: number; y: number } }) => void 
-                          } 
-                        }).__transformCoordinator;
-                        if (coordinator && typeof coordinator.setInitialTransform === 'function') {
-                          coordinator.setInitialTransform({
-                            scale: centerPosition.scale,
-                            translate: {
-                              x: centerPosition.x,
-                              y: centerPosition.y
-                            }
-                          });
-                        }
-                      } catch (coordError) {
-                        logger.warn('Error updating transform coordinator', { error: coordError }, 'workspace error');
-                      }
+                      // Calculate correction
+                      const correctionX = svgCenterX - projectCenterX;
+                      const correctionY = svgCenterY - projectCenterY;
                       
-                      // Make sure zoom is synchronized
-                      if (svgRef.current) {
+                      // Get current transform
+                      const transform = transformGroup.getAttribute('transform') || '';
+                      const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)\s*scale\(([^)]+)\)/);
+                      
+                      if (match && match.length >= 4) {
+                        const currentX = parseFloat(match[1]);
+                        const currentY = parseFloat(match[2]);
+                        const scale = parseFloat(match[3]);
+                        
+                        // Apply the correction
+                        const correctedX = currentX + correctionX;
+                        const correctedY = currentY + correctionY;
+                        const correctedTransform = `translate(${correctedX}, ${correctedY}) scale(${scale})`;
+                        
+                        transformGroup.setAttribute('transform', correctedTransform);
+                        
+                        logger.info('Applied centering correction', {
+                          from: { x: currentX, y: currentY },
+                          to: { x: correctedX, y: correctedY },
+                          offset: { x: correctionX, y: correctionY }
+                        }, 'workspace transform');
+                        
+                        // Sync zoom again after correction
                         syncZoomWithTransform(svgRef.current);
                       }
-                      
-                      // Save state with correct positioning
-                      setTimeout(() =>{
-                        if (typeof window.saveWorkspaceState === 'function') {
-                          window.saveWorkspaceState();
-                        }
-                      }, 100);
-                      
-                      // Verify project is centered correctly
-                      setTimeout(() =>{
-                        // Find the project element now that it should be rendered
-                        const projectElement = document.getElementById(`project-${projectId}`);
-                        if (projectElement) {
-                          const projectRect = projectElement.getBoundingClientRect();
-                          const projectCenterX = projectRect.left + projectRect.width / 2;
-                          const projectCenterY = projectRect.top + projectRect.height / 2;
-                          const svgCenterX = svgRect.left + svgRect.width / 2;
-                          const svgCenterY = svgRect.top + svgRect.height / 2;
-                          
-                          // Calculate offset from center
-                          const offsetX = Math.abs(svgCenterX - projectCenterX);
-                          const offsetY = Math.abs(svgCenterY - projectCenterY);
-                          
-                          logger.debug('Verifying project centering', {
-                            projectCenter: { x: projectCenterX, y: projectCenterY },
-                            svgCenter: { x: svgCenterX, y: svgCenterY },
-                            offset: { x: offsetX, y: offsetY }
-                          }, 'workspace transform');
-                          
-                          // Apply correction if needed (offset is too large)
-                          if (offsetX >5 || offsetY >5) {
-                            logger.info('Applying centering correction, project not precisely centered', {
-                              offsetX,
-                              offsetY
-                            }, 'workspace transform');
-                            
-                            // Calculate correction
-                            const correctionX = svgCenterX - projectCenterX;
-                            const correctionY = svgCenterY - projectCenterY;
-                            
-                            // Get current transform
-                            const transform = transformGroup.getAttribute('transform') || '';
-                            const match = transform.match(/translate\(([^,]+),\s*([^)]+)\)\s*scale\(([^)]+)\)/);
-                            
-                            if (match && match.length >= 4) {
-                              const currentX = parseFloat(match[1]);
-                              const currentY = parseFloat(match[2]);
-                              const scale = parseFloat(match[3]);
-                              
-                              // Apply the correction
-                              const correctedX = currentX + correctionX;
-                              const correctedY = currentY + correctionY;
-                              const correctedTransform = `translate(${correctedX}, ${correctedY}) scale(${scale})`;
-                              
-                              transformGroup.setAttribute('transform', correctedTransform);
-                              
-                              logger.info('Applied centering correction', {
-                                from: { x: currentX, y: currentY },
-                                to: { x: correctedX, y: correctedY },
-                                offset: { x: correctionX, y: correctionY }
-                              }, 'workspace transform');
-                              
-                              // Sync zoom again after correction
-                              syncZoomWithTransform(svgRef.current);
-                            }
-                          }
-                        }
-                      }, 150);
                     }
-                    
-                    // Short delay before showing elements
-                    setTimeout(() =>{
-                      // Remove hiding class to show elements in correct position
-                      document.body.classList.remove('hide-elements-until-centered');
-                      
-                      // Dispatch project-ready event
-                      document.dispatchEvent(new CustomEvent('project-ready'));
-                      
-                      logger.info('Elements revealed after centering', { projectId }, 'workspace visibility');
-                      
-                      // Additional save after showing elements
-                      if (typeof window.saveWorkspaceState === 'function') {
-                        window.saveWorkspaceState();
-                      }
-                    }, 200);
-                  } catch (error) {
-                    logger.error('Error applying centering for new project', { 
-                      projectId, 
-                      error: error instanceof Error ? error.message : String(error) 
-                    }, 'workspace error');
-                    
-                    // Remove hiding class even if there's an error
-                    document.body.classList.remove('hide-elements-until-centered');
-                    
-                    // Still dispatch ready event for fallback
-                    document.dispatchEvent(new CustomEvent('project-ready'));
                   }
-                }, 200);
-              }// After positioning, make sure zoom behavior is synced
+                }, 150);
+              }
+              
+              // Short delay before showing elements
+              setTimeout(() =>{
+                // Remove hiding class to show elements in correct position
+                document.body.classList.remove('hide-elements-until-centered');
+                
+                // Dispatch project-ready event
+                document.dispatchEvent(new CustomEvent('project-ready'));
+                
+                logger.info('Elements revealed after centering', { projectId }, 'workspace visibility');
+                
+                // Additional save after showing elements
+                if (typeof window.saveWorkspaceState === 'function') {
+                  window.saveWorkspaceState();
+                }
+              }, 200);
+            } catch (error) {
+              logger.error('Error applying centering for new project', { 
+                projectId, 
+                error: error instanceof Error ? error.message : String(error) 
+              }, 'workspace error');
+              
+              // Remove hiding class even if there's an error
+              document.body.classList.remove('hide-elements-until-centered');
+              
+              // Still dispatch ready event for fallback
+              document.dispatchEvent(new CustomEvent('project-ready'));
+            }
+          }, 200);
+        }
+        
+        // After positioning, make sure zoom behavior is synced
         if (svgRef.current && isInitialized) {
           syncZoomWithTransform(svgRef.current);
         }
@@ -1395,7 +1543,7 @@ useEffect(() =>{
       logger.error('Workspace render failed', { error: err }, 'workspace error');
       setError('Failed to render workspace');
     }
-  }, [dimensions, renderVersionRef.current, isInitialized, taskOps, isWorkspaceLoading]);
+  }, [dimensions, renderVersionRef.current, isInitialized, taskOps, isWorkspaceLoading, saveState]);
 
   // Wrap the SVG in the TransformSynchronizer
   return (

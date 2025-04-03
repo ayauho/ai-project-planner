@@ -1,3 +1,5 @@
+// Import the unified TaskVisualState type from workspace state types
+import { TaskVisualState } from '@/lib/workspace/state/types';
 import { ObjectId } from 'mongodb';
 
 export interface Task {
@@ -17,8 +19,9 @@ export interface Task {
   updatedAt?: Date;
 }
 
+// Use the imported TaskVisualState to ensure it's used
 export interface TaskWithVisualState extends Task {
-  visualState?: 'active' | 'semi-transparent' | 'hidden';
+  visualState?: TaskVisualState;
 }
 
 export interface SystemUpdateTaskInput {
@@ -49,5 +52,3 @@ export interface UpdateTaskInput {
   childrenCount?: number;
   descendantCount?: number;
 }
-
-export type TaskVisualState = 'active' | 'semi-transparent' | 'hidden';

@@ -11,6 +11,7 @@ import { select, Selection } from 'd3-selection';
 import { projectRectangleRenderer } from '@/lib/client/visual/project/rectangle';
 import { connectionDrawer } from '../services/connection-drawer';
 import { centerOnElement, centerOnTaskById, centerOnProjectById } from '@/lib/client/visual/utils/centering';
+import { TaskVisualState } from '@/lib/workspace/state/types';
 
 export interface StateTransitionOptions {
   centerViewport?: boolean;
@@ -201,30 +202,199 @@ class TaskStateCoordinator {
             connectionDrawer.reanimateConnections(layers.connections, taskId);
           }
         }, 300);
-      }
-      
-      // Ensure project state is updated
+      }      // Ensure project state is updated and apply graduated opacity
       if (state.selectedProject) {
         const projectId = state.selectedProject._id.toString();
-        const projectState = hierarchy.states.get(projectId) || 'semi-transparent';
-        
-        // Update project visualization
-        const contentNode = select('.layer-content').node();
-        if (contentNode) {
-          projectRectangleRenderer.updateState(
-            contentNode as SVGGElement, 
-            projectId, 
-            projectState
-          );
-          
-          // Update project connection opacity
-          const connectionsLayer = select('.layer-connections');
-          if (!connectionsLayer.empty()) {
-            connectionDrawer.updateConnectionOpacity(
-              connectionsLayer as unknown as Selection<SVGGElement, unknown, null, undefined>,
+        const projectState = hierarchy.states.get(projectId) || 'semi-transparent';      // Process all semi-transparent elements with graduated opacity
+      if (hierarchy.opacityValues) {
+        // Process all rectangles with their graduated opacity values
+        hierarchy.opacityValues.forEach((opacity, elementId) =>{
+          if (opacity > 0 && opacity < 1) {
+            // Update rectangle opacity
+            const contentNode = select('.layer-content').node();
+            if (contentNode) {
+              // Use element state to communicate opacity value
+              try {
+                const elementState = hierarchy.states.get(elementId) || 'semi-transparent';
+                const customOpacityState = `opacity-${opacity.toFixed(3)}`;
+                
+                // For project
+                if (elementId === projectId) {
+                  // Use type assertion to ensure TypeScript recognizes this is a valid TaskVisualState
+                  // We know it's valid because we constructed it from a pattern that matches the type
+                  const typedOpacityState = customOpacityState as `opacity-${string}`;
+                  projectRectangleRenderer.updateState(
+                    contentNode as SVGGElement, 
+                    projectId, 
+                    typedOpacityState // Use custom opacity state with proper type
+                  );
+                }
+                // For tasks
+                else {
+                  const taskElement = select(`#task-${elementId}`);
+                  if (!taskElement.empty()) {
+                    // Apply specific opacity directly to the element
+                    // Apply the exact opacity directly to ensure graduated values (0.5, 0.25, 0.125) are preserved
+                    // First apply with standard D3 methods for type safety
+                    taskElement.style('opacity', opacity.toString());
+                    
+                    // Set data attributes for CSS targeting
+                    taskElement.attr('data-opacity', opacity.toString());
+                    // IMPORTANT: Use the custom opacity state (not "semi-transparent") to avoid CSS overrides
+                    taskElement.attr('data-state', elementState);
+                    
+                    // Set CSS variable for use in stylesheets
+                    taskElement.style('--exact-opacity', opacity.toString());
+                    
+                    // Try direct DOM manipulation for more forceful override if node is accessible
+                    const taskNode = taskElement.node();
+                    if (taskNode && (taskNode instanceof SVGElement || taskNode instanceof HTMLElement)) {
+                      taskNode.style.setProperty('opacity', opacity.toString(), 'important');
+                    }
+                    
+                    // Also apply opacity directly to the rectangle
+                    const taskRect = taskElement.select('rect');
+                    if (!taskRect.empty()) {
+                      // Apply with D3 style method
+                      taskRect.style('opacity', opacity.toString());
+                      taskRect.style('fill-opacity', opacity.toString());
+                      
+                      // Try direct DOM manipulation if possible
+                      const rectNode = taskRect.node();
+                      if (rectNode && (rectNode instanceof SVGElement || rectNode instanceof HTMLElement)) {
+                        rectNode.style.setProperty('opacity', opacity.toString(), 'important');
+                        rectNode.style.setProperty('fill-opacity', opacity.toString(), 'important');
+                      }
+                    }
+                    
+                    // Log for debugging
+                    logger.debug('Applied graduated opacity to task element', {
+                      taskId: elementId,
+                      opacity,
+                      state: customOpacityState
+                    }, 'state-coordinator opacity');
+                    
+                    // Apply the same opacity to any associated controls
+                    const controls = document.querySelectorAll(`.task-control-${elementId}, .task-split-button[data-task-id="${elementId}"]`);
+                    controls.forEach(control =>{
+                      if (control instanceof HTMLElement || control instanceof SVGElement) {
+                        // Force immediate opacity application with !important
+                        control.style.setProperty('opacity', opacity.toString(), 'important');
+                        control.setAttribute('data-opacity', opacity.toString());
+                        control.setAttribute('data-state', customOpacityState);
+                      }
+                    });
+                    
+                    logger.debug('Applied graduated opacity to controls', {
+                      taskId: elementId,
+                      opacity,
+                      state: customOpacityState,
+                      controlsUpdated: controls.length
+                    }, 'state-coordinator opacity');
+                  }
+                }
+                
+                // CRITICAL: Update connection opacity for this element with high priority
+                const connectionsLayer = select('.layer-connections');
+                if (!connectionsLayer.empty()) {
+                  // First try to find connections with data-source-id attribute
+                  const sourceConnections = connectionsLayer.selectAll(`.connection-group[data-source-id="${elementId}"]`);
+                  
+                  if (!sourceConnections.empty()) {
+                    sourceConnections.each(function() {
+                      const connectionGroup = select(this);
+                      // Force immediate opacity application with !important
+                      connectionGroup.style('opacity', opacity.toString());
+                      connectionGroup.attr('data-opacity', opacity.toString());
+                      connectionGroup.attr('data-state', customOpacityState);
+                      
+                      logger.debug('Applied opacity to connection via source-id', {
+                        connectionId: connectionGroup.attr('id'),
+                        sourceId: elementId,
+                        opacity,
+                        state: customOpacityState
+                      }, 'connection-opacity');
+                    });
+                  } else {
+                    // Fallback to ID-based matching if no data-source-id found
+                    connectionsLayer.selectAll(`.connection-group`).each(function() {
+                      const connectionGroup = select(this);
+                      const connectionId = connectionGroup.attr('id') || '';
+                      
+                      // Check if this connection is related to the current element
+                      if (connectionId.includes(elementId)) {
+                        // Add data-source-id attribute for future lookups
+                        connectionGroup.attr('data-source-id', elementId);
+                        
+                        // Force immediate opacity application
+                        // Apply with D3 style method first (type-safe)
+                        connectionGroup.style('opacity', opacity.toString());
+                        
+                        // Set data attributes for CSS targeting
+                        connectionGroup.attr('data-opacity', opacity.toString());
+                        connectionGroup.attr('data-state', customOpacityState);
+                        
+                        // Set CSS variable for stylesheet use
+                        connectionGroup.style('--exact-opacity', opacity.toString());
+                        
+                        // Try direct DOM manipulation if possible for stronger override
+                        const connNode = connectionGroup.node();
+                        if (connNode && (connNode instanceof SVGElement || connNode instanceof HTMLElement)) {
+                          connNode.style.setProperty('opacity', opacity.toString(), 'important');
+                        }
+                        
+                        logger.debug('Applied opacity to connection via ID match', {
+                          connectionId,
+                          elementId,
+                          opacity,
+                          state: customOpacityState
+                        }, 'connection-opacity');
+                      }
+                    });
+                  }
+                  
+                  // Also use the connection drawer's method for consistent opacity application
+                  connectionDrawer.updateConnectionOpacity(
+                    connectionsLayer as unknown as Selection<SVGGElement, unknown, null, undefined>,
+                    elementId, 
+                    opacity,
+                    false // disable animation for immediate effect
+                  );
+                  
+                  logger.debug('Updated connection opacity through drawer', {
+                    elementId,
+                    opacity,
+                    state: customOpacityState
+                  }, 'state-coordinator opacity');
+                }}catch (error) {
+                  logger.error('Error applying graduated opacity', {
+                    elementId,
+                    opacity,
+                    error
+                  }, 'state-coordinator error');
+                }
+              }
+            }
+          });
+        } else {
+          // Fallback to traditional binary opacity
+          const contentNode = select('.layer-content').node();
+          if (contentNode) {
+            projectRectangleRenderer.updateState(
+              contentNode as SVGGElement, 
               projectId, 
-              projectState === 'active' ? 1 : 0.5
+              projectState
             );
+            
+            // Update project connection opacity
+            const connectionsLayer = select('.layer-connections');
+            if (!connectionsLayer.empty()) {
+              connectionDrawer.updateConnectionOpacity(
+                connectionsLayer as unknown as Selection<SVGGElement, unknown, null, undefined>,
+                projectId, 
+                projectState === 'active' ? 1 : 0.5
+              );
+            }
           }
         }
       }

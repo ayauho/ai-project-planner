@@ -1,0 +1,47 @@
+/**
+ * Overlapped controls visibility styles
+ * These high-specificity rules ensure overlapped controls stay hidden
+ */
+
+/* Target overlapped controls with ultra-high specificity */
+html body svg .overlapped-control,
+html body .workspace .overlapped-control,
+html body .layer-controls .overlapped-control,
+.workspace-visual .layer-controls .overlapped-control,
+.workspace-visual svg .overlapped-control,
+body .layer-controls [data-overlapped="true"],
+body svg [data-overlapped="true"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Add overlapped CSS animation to make it visually obvious when debugging */
+@keyframes overlapped-pulse {
+  0% { outline: 2px solid rgba(255, 0, 0, 0.5); }
+  50% { outline: 2px solid rgba(255, 0, 0, 0.8); }
+  100% { outline: 2px solid rgba(255, 0, 0, 0.5); }
+}
+
+/* For debugging - uncomment this to see which elements are marked as overlapped */
+/*
+.overlapped-control,
+[data-overlapped="true"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 0.5 !important;
+  animation: overlapped-pulse 2s infinite;
+  outline: 2px solid red !important;
+  filter: hue-rotate(180deg);
+}
+*/

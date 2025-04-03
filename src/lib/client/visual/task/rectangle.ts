@@ -48,13 +48,7 @@ export class TaskRectangleRenderer {
     this.expandedStates = new Map();
     this.originalDimensions = new Map();
     this.eventEmitter = TaskEventEmitter.getInstance();
-  }
-
-  render(
-    container: SVGGElement | null, 
-    task: TaskRect, 
-    options: { animate?: boolean; checkApiKey?: boolean } = {}
-  ): SVGGElement | null {
+  }  render(container: SVGGElement | null, task: TaskRect, options: { animate?: boolean; checkApiKey?: boolean } = {}): SVGGElement | null {
     if (!container) return null;
 
     const isExpanded = this.expandedStates.get(task.id) || false;
@@ -102,6 +96,19 @@ export class TaskRectangleRenderer {
           group.style('opacity', 0.5);
         } else if (task.state === 'hidden') {
           group.style('opacity', 0).style('visibility', 'hidden');
+        } else if (typeof task.state === 'string' && task.state.startsWith('opacity-')) {
+          // Extract custom opacity value
+          const opacityStr = task.state.replace('opacity-', '');
+          const parsedOpacity = parseFloat(opacityStr);
+          
+          // Apply valid opacity or default to 0.5
+          if (!isNaN(parsedOpacity) && parsedOpacity >= 0 && parsedOpacity <= 1) {
+            group.style('opacity', parsedOpacity);
+            // Store the specific opacity as a data attribute
+            group.attr('data-opacity', parsedOpacity.toString());
+          } else {
+            group.style('opacity', 0.5); // Default to semi-transparent
+          }
         } else {
           group.style('opacity', 1);
         }
@@ -110,7 +117,7 @@ export class TaskRectangleRenderer {
       // Calculate the hierarchy level based on task parentage
       const level = svgOrderManager.calculateTaskLevel(task.parentId);
       
-      // Add data-level attribute
+      // Add data-level attribute - ensure it's not null by using toString
       group.attr('data-level', level.toString());
       
       // Register with order manager for proper stacking
@@ -123,15 +130,90 @@ export class TaskRectangleRenderer {
         width: task.dimensions.width,
         height: task.dimensions.height
       }, level);
-
-      // Use destructuring with rename for the unused variable
+      
+      logger.debug('Registered task rectangle with overlap detector', {
+        _path: true,
+        taskId: task.id,
+        level,
+        position: {
+          x: task.position.x,
+          y: task.position.y,
+          width: task.dimensions.width,
+          height: task.dimensions.height
+        }
+      }, 'overlap-detection registration');
+      
+      // Dispatch a custom event for rectangle rendering to trigger overlap detection
+      if (typeof window !== 'undefined') {
+        try {
+          // Import isStateBeingRestored function
+          import('@/app/preload-state').then(({ isStateBeingRestored }) => {
+            if (!isStateBeingRestored()) {
+              window.dispatchEvent(new CustomEvent('rectangle-rendered', {
+                detail: {
+                  id: `task-${task.id}`,
+                  type: 'rectangle',
+                  isProject: false,
+                  level: level,
+                  bounds: {
+                    x: task.position.x,
+                    y: task.position.y,
+                    width: task.dimensions.width,
+                    height: task.dimensions.height
+                  }
+                }
+              }));
+            }
+          }).catch(error => {
+            logger.error('Failed to import isStateBeingRestored', {
+              error: error instanceof Error ? error.message : String(error)
+            }, 'task-rectangle rendering');
+            
+            // Dispatch the event anyway as a fallback
+            window.dispatchEvent(new CustomEvent('rectangle-rendered', {
+              detail: {
+                id: `task-${task.id}`,
+                type: 'rectangle',
+                isProject: false,
+                level: level,
+                bounds: {
+                  x: task.position.x,
+                  y: task.position.y,
+                  width: task.dimensions.width,
+                  height: task.dimensions.height
+                }
+              }
+            }));
+          });
+        } catch (error) {
+          logger.error('Error dispatching rectangle-rendered event', {
+            error: error instanceof Error ? error.message : String(error)
+          }, 'task-rectangle rendering');
+        }
+      }      // Use destructuring with rename for the unused variable
       const { clipId, titleClipId: _titleClipId } = createClipPaths(group, task, this.config);
       const mainGroup = group.append('g').attr('clip-path', `url(#${clipId})`);
 
-      renderBackground(mainGroup, task, this.config);
-      const metrics = renderTaskTexts(mainGroup, task, this.config, isExpanded) as TaskMetrics;
+      // Determine which style to use based on state
+      let styleKey: 'active' | 'semi-transparent' | 'hidden' = 'active';
+      
+      if (task.state === 'semi-transparent') {
+        styleKey = 'semi-transparent';
+      } else if (task.state === 'hidden') {
+        styleKey = 'hidden';
+      } else if (typeof task.state === 'string' && task.state.startsWith('opacity-')) {
+        // Use semi-transparent styles for custom opacity states
+        styleKey = 'semi-transparent';
+      }
+      
+      // Create a modified task with a standard state for rendering
+      const renderTask = {
+        ...task,
+        state: styleKey
+      };
 
-      // Calculate lines with safe defaults
+      renderBackground(mainGroup, renderTask, this.config);
+      const metrics = renderTaskTexts(mainGroup, renderTask, this.config, isExpanded) as TaskMetrics;// Calculate lines with safe defaults
       const lines = metrics?.fullMetrics?.lines ?? 0;
 
       // Calculate height based on content
@@ -540,17 +622,38 @@ export class TaskRectangleRenderer {
         // Bring to front when expanding
         if (!wasExpanded) {
           this.bringToFront(container, task.id);
+        }      // Update overlap detector with new dimensions
+      overlapDetector.updateRectangleBounds(`task-${task.id}`, {
+        x: task.position.x,
+        y: task.position.y,
+        width: newTask.dimensions.width,
+        height: newTask.dimensions.height
+      });
+      
+      // Dispatch a custom event to trigger overlap detection
+      if (typeof window !== 'undefined') {
+        try {
+          window.dispatchEvent(new CustomEvent('rectangle-rendered', {
+            detail: {
+              id: `task-${task.id}`,
+              type: 'rectangle',
+              isUpdate: true,
+              isExpand: !wasExpanded,
+              level: parseInt(newGroup.getAttribute('data-level') ?? '0'),
+              bounds: {
+                x: task.position.x,
+                y: task.position.y,
+                width: newTask.dimensions.width,
+                height: newTask.dimensions.height
+              }
+            }
+          }));
+        } catch (error) {
+          logger.error('Error dispatching rectangle-rendered event during toggle', {
+            error: error instanceof Error ? error.message : String(error)
+          }, 'task-rectangle expansion');
         }
-        
-        // Update overlap detector with new dimensions
-        overlapDetector.updateRectangleBounds(`task-${task.id}`, {
-          x: task.position.x,
-          y: task.position.y,
-          width: newTask.dimensions.width,
-          height: newTask.dimensions.height
-        });
-        
-        // For collapsed state, explicitly set the height attribute on the rectangle
+      }// For collapsed state, explicitly set the height attribute on the rectangle
         if (wasExpanded) {
           const rect = select(newGroup).select('rect');
           if (!rect.empty()) {
@@ -646,7 +749,7 @@ export class TaskRectangleRenderer {
     logger.debug('Cleared all task expansion states', {}, 'task-rectangle expansion-reset');
   }
 
-  updateState(container: SVGGElement | null, taskId: string, newState: 'active' | 'semi-transparent' | 'hidden'): void {
+  updateState(container: SVGGElement | null, taskId: string, newState: 'active' | 'semi-transparent' | 'hidden' | `opacity-${string}`): void {
     if (!container) return;
 
     logger.debug('Updating task state', { taskId, newState }, 'task-rectangle state-update');
@@ -686,16 +789,44 @@ export class TaskRectangleRenderer {
       
       if (!rect.empty()) {
         const t = transition().duration(duration);
-        const styles = this.config.styles[newState];
-
+        
+        // Handle custom opacity state
+        let targetOpacity = 1.0; // Default full opacity
+        let styles = this.config.styles['active']; // Default to active styles
+        
+        if (newState === 'semi-transparent') {
+          targetOpacity = 0.5;
+          styles = this.config.styles['semi-transparent'];
+        } else if (newState === 'hidden') {
+          targetOpacity = 0;
+          styles = this.config.styles['hidden'];
+        } else if (newState.startsWith('opacity-')) {
+          // Extract custom opacity value from state name
+          const opacityStr = newState.replace('opacity-', '');
+          targetOpacity = parseFloat(opacityStr);
+          
+          // Validate opacity value
+          if (isNaN(targetOpacity) || targetOpacity < 0 || targetOpacity > 1) {
+            targetOpacity = 0.5; // Fallback to semi-transparent if invalid
+          }
+          
+          // Use semi-transparent styles for custom opacity
+          styles = this.config.styles['semi-transparent'];
+          
+          logger.debug('Applied custom opacity state', {
+            taskId,
+            opacityStr,
+            targetOpacity
+          }, 'task-rectangle state-update');
+        }
+        
+        // Apply styles
         rect.transition(t)
           .style('fill', styles.fill)
           .style('stroke', styles.stroke)
           .style('stroke-width', styles.strokeWidth);
         
         // Transition to new opacity
-        const targetOpacity = newState === 'semi-transparent' ? 0.5 : newState === 'hidden' ? 0 : 1;
-        
         group.transition(t)
           .style('opacity', targetOpacity)
           .on('end', () =>{
@@ -706,6 +837,9 @@ export class TaskRectangleRenderer {
               group.style('visibility', 'visible');
             }
             
+            // Store the specific opacity value as a data attribute for CSS targeting
+            group.attr('data-opacity', targetOpacity.toString());
+            
             // Emit event that state change is complete
             this.eventEmitter.emit({
               taskId,
@@ -713,12 +847,13 @@ export class TaskRectangleRenderer {
               data: {
                 previousState,
                 newState,
-                isComplete: true
+                isComplete: true,
+                opacity: targetOpacity
               }
             });
             
             // If transitioning to active state, also trigger animation of connections
-            if (newState === 'active' && previousState !== 'active') {
+            if ((newState === 'active' || targetOpacity === 1.0) && previousState !== 'active') {
               setTimeout(() =>{
                 this.eventEmitter.emit({
                   taskId,

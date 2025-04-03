@@ -175,6 +175,23 @@ class ClientLogger {
   }
 
   /**
+   * Check if the logger keywords match the config keyword
+   * - If config keyword has no spaces: ANY match in logger keywords is sufficient
+   * - If config keyword has spaces: ALL words in the config keyword must be in logger keywords
+   */
+  private keywordMatches(loggerKeywords: string[], configKeyword: string): boolean {
+    // Check if the config keyword contains spaces
+    if (configKeyword.includes(' ')) {
+      // Multi-word case: ALL words must be present
+      const configKeywordParts = configKeyword.split(/\s+/);
+      return configKeywordParts.every(part => loggerKeywords.includes(part));
+    } else {
+      // Single-word case: match if present
+      return loggerKeywords.includes(configKeyword);
+    }
+  }
+
+  /**
    * Extract the calling file path from the stack trace
    */
   private getCallerPath(): string {
@@ -221,7 +238,7 @@ class ClientLogger {
       }
       
       return 'unknown';
-    } catch {
+    } catch (e) {
       return 'unknown';
     }
   }
@@ -298,19 +315,19 @@ class ClientLogger {
         return false;
       }
       
-      // Check if ANY of the provided keywords is in the show list
-      const shouldShow = keywords.some(keyword => 
-        configFile['show-by-keyword'].keywords.includes(keyword)
+      // Check if ANY of the config keywords match
+      const shouldShow = configFile['show-by-keyword'].keywords.some(configKeyword => 
+        this.keywordMatches(keywords, configKeyword)
       );
       
       if (!shouldShow) {
         return false;
       }
       
-      // Check if ANY of the keywords is in the hide list
+      // Check if ANY of the config keywords in hide list match
       if (configFile['hide-by-keyword'].works) {
-        const shouldHide = keywords.some(keyword => 
-          configFile['hide-by-keyword'].keywords.includes(keyword)
+        const shouldHide = configFile['hide-by-keyword'].keywords.some(configKeyword => 
+          this.keywordMatches(keywords, configKeyword)
         );
         
         if (shouldHide) {
@@ -318,15 +335,15 @@ class ClientLogger {
         }
       }
       
-      // If we got here, at least one keyword is in the show list and none are in the hide list
+      // If we got here, at least one config keyword matches the show list and none match the hide list
       return true;
     }
     
     // If only hide-by-keyword is active
     if (configFile['hide-by-keyword'].works && keywords.length > 0) {
-      // Check if ANY of the keywords is in the hide list
-      return !keywords.some(keyword => 
-        configFile['hide-by-keyword'].keywords.includes(keyword)
+      // Check if ANY of the config keywords in hide list match
+      return !configFile['hide-by-keyword'].keywords.some(configKeyword => 
+        this.keywordMatches(keywords, configKeyword)
       );
     }
     

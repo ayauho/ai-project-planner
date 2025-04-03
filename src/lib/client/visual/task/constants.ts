@@ -2,6 +2,10 @@
 
 import type { TaskConfig } from './types';
 
+// Opacity decreasing factor for ancestor chain elements
+// Each ancestor level will have its opacity reduced by this factor
+export const OPACITY_DECREASING_FACTOR = 0.7;
+
 export const DEFAULT_TASK_CONFIG: TaskConfig = {
   styles: {
     active: {

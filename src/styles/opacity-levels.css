@@ -1,0 +1,56 @@
+/* Graduated opacity styles for ancestor chain */
+.task-group[data-state^="opacity-"],
+.project-group[data-state^="opacity-"] {
+  /* Opacity is applied directly via style attribute and transition */
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Override the fixed semi-transparent styles for our custom opacity values */
+g[id^="task-"][data-state^="opacity-"],
+g[id^="project-"][data-state^="opacity-"] {
+  /* Custom opacity states should use their exact values */
+  /* This has higher specificity to override the semi-transparent rules */
+  opacity: var(--exact-opacity, 1) !important;
+}
+
+g[id^="task-"][data-state^="opacity-"] rect,
+g[id^="project-"][data-state^="opacity-"] rect {
+  /* Ensure rect elements also respect the custom opacity */
+  opacity: var(--exact-opacity, 1) !important;
+  fill-opacity: var(--exact-opacity, 1) !important;
+}
+
+/* Connection opacity handling */
+.connection-group[data-opacity] {
+  /* Custom opacity transitions for connections */
+  transition: opacity 0.3s ease-out !important;
+}
+
+/* Apply graduated opacity to all elements with data-exact-opacity */
+[data-exact-opacity] {
+  /* Set a CSS variable for opacity value use */
+  --exact-opacity: attr(data-exact-opacity);
+  /* High specificity to override other rules */
+  opacity: attr(data-exact-opacity) !important;
+}
+
+/* Control elements with custom opacity - high-specificity selectors to override defaults */
+.task-control[data-opacity],
+.task-split-button[data-opacity],
+g[data-opacity],
+svg .task-control[data-opacity],
+svg .task-split-button[data-opacity],
+.layer-controls g[data-opacity],
+html body svg g.task-control[data-opacity],
+html body svg g.task-split-button[data-opacity] {
+  transition: opacity 0.2s ease-out !important;
+  opacity: var(--exact-opacity, attr(data-opacity)) !important;
+}
+
+/* Graduated opacity for controls associated with task/project rectangles */
+.task-control[data-state^="opacity-"],
+.task-split-button[data-state^="opacity-"],
+.layer-controls g[data-state^="opacity-"] {
+  opacity: var(--exact-opacity, 1) !important;
+  transition: opacity 0.3s ease-out !important;
+}

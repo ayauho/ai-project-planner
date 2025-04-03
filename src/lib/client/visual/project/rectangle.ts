@@ -14,6 +14,7 @@ import { overlapDetector } from '@/components/workspace/visual/utils/overlap-det
 import { animationManager } from '../utils/animation';
 import { TaskEventEmitter } from '../task/events';
 import { emitDirectSelectionEvent } from '../utils/centering';
+import { TaskVisualState } from '@/lib/workspace/state/types';
 
 export class ProjectRectangleRenderer {
   private config: TaskConfig;
@@ -59,6 +60,19 @@ export class ProjectRectangleRenderer {
           group.style('opacity', 1);  // Adjusted from 0.5 to 1
         } else if (project.state === 'hidden') {
           group.style('opacity', 0).style('visibility', 'hidden');
+        } else if (typeof project.state === 'string' && project.state.startsWith('opacity-')) {
+          // Extract custom opacity value
+          const opacityStr = project.state.replace('opacity-', '');
+          const parsedOpacity = parseFloat(opacityStr);
+          
+          // Apply valid opacity or default to 1
+          if (!isNaN(parsedOpacity) && parsedOpacity >= 0 && parsedOpacity <= 1) {
+            group.style('opacity', parsedOpacity);
+            // Store the specific opacity as a data attribute
+            group.attr('data-opacity', parsedOpacity.toString());
+          } else {
+            group.style('opacity', 1);
+          }
         } else {
           group.style('opacity', 1);
         }
@@ -78,8 +92,26 @@ export class ProjectRectangleRenderer {
       const { clipId, titleClipId: _titleClipId } = createClipPaths(group, project, this.config);
       const mainGroup = group.append('g').attr('clip-path', `url(#${clipId})`);
 
-      renderBackground(mainGroup, project, this.config);
-      renderTaskTexts(mainGroup, project, this.config, false);
+      // Determine which style to use based on state
+      let styleKey: 'active' | 'semi-transparent' | 'hidden' = 'active';
+      
+      if (project.state === 'semi-transparent') {
+        styleKey = 'semi-transparent';
+      } else if (project.state === 'hidden') {
+        styleKey = 'hidden';
+      } else if (typeof project.state === 'string' && project.state.startsWith('opacity-')) {
+        // Use semi-transparent styles for custom opacity states
+        styleKey = 'semi-transparent';
+      }
+      
+      // Create a modified project with a standard state for rendering
+      const renderProject = {
+        ...project,
+        state: styleKey
+      };
+
+      renderBackground(mainGroup, renderProject, this.config);
+      renderTaskTexts(mainGroup, renderProject, this.config, false);
 
       // Add a transparent overlay for the entire project area to handle clicks
       mainGroup.append('rect')
@@ -278,7 +310,7 @@ export class ProjectRectangleRenderer {
     }
   }
 
-  updateState(container: SVGGElement | null, projectId: string, newState: 'active' | 'semi-transparent' | 'hidden'): void {
+  updateState(container: SVGGElement | null, projectId: string, newState: TaskVisualState): void {
     if (!container) return;
 
     logger.debug('Updating project state', { projectId, newState }, 'project-rectangle state-update');
@@ -304,16 +336,54 @@ export class ProjectRectangleRenderer {
       if (!rect.empty()) {
         const duration = 300; // Consistent animation duration
         const t = transition().duration(duration);
-        const styles = this.config.styles[newState];
+        
+        // Determine which style to use based on state
+        let styleKey: 'active' | 'semi-transparent' | 'hidden' = 'active';
+        
+        if (newState === 'semi-transparent') {
+          styleKey = 'semi-transparent';
+        } else if (newState === 'hidden') {
+          styleKey = 'hidden';
+        } else if (typeof newState === 'string' && newState.startsWith('opacity-')) {
+          // Use semi-transparent styles for custom opacity states
+          styleKey = 'semi-transparent';
+        }
+        
+        const styles = this.config.styles[styleKey];
 
         rect.transition(t)
           .style('fill', styles.fill)
           .style('stroke', styles.stroke)
           .style('stroke-width', styles.strokeWidth);
         
-        // Apply the opacity to the whole group for consistency
-        const targetOpacity = newState === 'semi-transparent' ? 1 : newState === 'hidden' ? 0 : 1;
+        // Calculate target opacity based on state
+        let targetOpacity = 1.0; // Default full opacity
         
+        if (newState === 'semi-transparent') {
+          targetOpacity = 1.0; // Project uses 1.0 even for semi-transparent state
+        } else if (newState === 'hidden') {
+          targetOpacity = 0;
+        } else if (typeof newState === 'string' && newState.startsWith('opacity-')) {
+          // Extract custom opacity value from state name
+          const opacityStr = newState.replace('opacity-', '');
+          const parsedOpacity = parseFloat(opacityStr);
+          
+          // Validate opacity value
+          if (!isNaN(parsedOpacity) && parsedOpacity >= 0 && parsedOpacity <= 1) {
+            targetOpacity = parsedOpacity;
+            
+            // Store the specific opacity as a data attribute
+            group.attr('data-opacity', targetOpacity.toString());
+            
+            logger.debug('Applied custom opacity to project', {
+              projectId,
+              opacity: targetOpacity,
+              state: newState
+            }, 'project-rectangle state-update');
+          }
+        }
+        
+        // Apply the opacity to the whole group for consistency
         group.transition(t)
           .style('opacity', targetOpacity)
           .on('end', () =>{
@@ -342,13 +412,18 @@ export class ProjectRectangleRenderer {
         // Update counter appearance based on state
         const counterRect = counter.select('rect');
         if (!counterRect.empty()) {
-          const borderColor = newState === 'semi-transparent' ? 
-                            '#94a3b8' : // Grey for semi-transparent
-                            '#2563eb';  // Blue for active
-                            
-          const borderWidth = newState === 'semi-transparent' ? 
-                            1 : // Thinner for semi-transparent
-                            2;  // Normal for active
+          let borderColor = '#2563eb'; // Default blue for active
+          let borderWidth = 2; // Default width for active
+          
+          // Determine styling based on state
+          if (newState === 'semi-transparent') {
+            borderColor = '#94a3b8'; // Grey for semi-transparent
+            borderWidth = 1; // Thinner for semi-transparent
+          } else if (typeof newState === 'string' && newState.startsWith('opacity-')) {
+            // For custom opacity states, use semi-transparent styling
+            borderColor = '#94a3b8'; // Grey for semi-transparent states
+            borderWidth = 1; // Thinner for semi-transparent states
+          }
           
           // Animate the counter style changes
           counterRect.transition()
@@ -369,6 +444,23 @@ export class ProjectRectangleRenderer {
           // Hide counter only when project is hidden
           counter.style('visibility', 'hidden');
           counter.style('opacity', '0');
+        } else if (typeof newState === 'string' && newState.startsWith('opacity-')) {
+          // For custom opacity states, extract the value
+          const opacityStr = newState.replace('opacity-', '');
+          const parsedOpacity = parseFloat(opacityStr);
+          
+          // Apply a percentage of the parsed opacity to keep counter more visible
+          // Using 0.9 multiplier to ensure counter is slightly more visible than the project
+          if (!isNaN(parsedOpacity) && parsedOpacity >= 0 && parsedOpacity <= 1) {
+            const counterOpacity = Math.min(0.9, parsedOpacity * 1.2); // Slightly more visible
+            counter.style('opacity', counterOpacity.toString());
+            
+            // Store the opacity value as a data attribute
+            counter.attr('data-opacity', counterOpacity.toString());
+          } else {
+            // Fallback to semi-transparent
+            counter.style('opacity', '0.9');
+          }
         }
       }
     } catch (error) {

@@ -1,7 +1,7 @@
 import { ProjectWithTaskCount } from '@/lib/project/types';
 import { Task } from '@/lib/task/types';
 
-export type TaskVisualState = 'active' | 'semi-transparent' | 'hidden';
+export type TaskVisualState = 'active' | 'semi-transparent' | 'hidden' | `opacity-${string}`;
 
 export interface TaskHierarchyState {
   expandedTaskId: string;

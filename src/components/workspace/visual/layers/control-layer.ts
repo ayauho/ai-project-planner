@@ -130,6 +130,153 @@ export class ControlLayer extends BaseLayer {
     }
   }  
   /**
+   * Fix all overlapped controls in the workspace
+   * This ensures all controls have consistent visibility based on overlap state
+   */
+  public fixAllOverlappedControls(): void {
+    try {
+      logger.info('Fixing all overlapped controls in workspace', {
+        _path: true
+      }, 'controls visibility');
+      
+      // First get all controls with overlapped class/attribute
+      const overlappedControls = document.querySelectorAll('.overlapped-control, [data-overlapped="true"]');
+      
+      // Ensure they are all properly hidden
+      let fixedCount = 0;
+      overlappedControls.forEach(control => {
+        // Check if it's actually hidden
+        const isActuallyHidden = getComputedStyle(control).visibility === 'hidden' || 
+                              getComputedStyle(control).display === 'none';
+                              
+        if (!isActuallyHidden) {
+          // Fix it - force hide
+          if (control instanceof HTMLElement || control instanceof SVGElement) {
+            control.style.setProperty('display', 'none', 'important');
+            control.style.setProperty('visibility', 'hidden', 'important');
+            control.style.setProperty('opacity', '0', 'important');
+            control.style.setProperty('pointer-events', 'none', 'important');
+            fixedCount++;
+          }
+        }
+      });
+      
+      // Now check all rectangle and control pairs for proper overlap state
+      const rectangleElements = document.querySelectorAll('[id^="task-"], [id^="project-"]');
+      const controlElements = document.querySelectorAll('.task-control, .task-split-button, [data-control-type]');
+      
+      // Count of checked pairs and fixes made
+      let pairsChecked = 0;
+      let additionalFixes = 0;
+      
+      // For each rectangle, check potential overlaps with controls
+      Array.from(rectangleElements).forEach(rectElement => {
+        // Skip if not a valid rectangle
+        if (!rectElement.getBoundingClientRect) return;
+        
+        // Get rectangle ID and level
+        const rectId = rectElement.id;
+        const rectLevelAttr = rectElement.getAttribute('data-level');
+        if (!rectId || !rectLevelAttr) return;
+        
+        const rectLevel = parseInt(rectLevelAttr);
+        if (isNaN(rectLevel)) return;
+        
+        // Get rectangle bounds
+        const rectBounds = rectElement.getBoundingClientRect();
+        
+        // Check each control for potential overlap
+        Array.from(controlElements).forEach(controlElement => {
+          // Skip if not a valid control
+          if (!controlElement.getBoundingClientRect) return;
+          
+          // Get control ID and level
+          const controlId = controlElement.id || 
+                          controlElement.getAttribute('data-id') || 
+                          controlElement.getAttribute('data-task-id');
+          const controlLevelAttr = controlElement.getAttribute('data-level');
+          if (!controlId || !controlLevelAttr) return;
+          
+          const controlLevel = parseInt(controlLevelAttr);
+          if (isNaN(controlLevel)) return;
+          
+          // Skip if control belongs to this rectangle
+          if (controlElement.getAttribute('data-task-id') === rectId.replace('task-', '')) return;
+          
+          // Get control bounds
+          const controlBounds = controlElement.getBoundingClientRect();
+          
+          // Check if they overlap
+          const isOverlapping = !(
+            controlBounds.right < rectBounds.left || 
+            controlBounds.left > rectBounds.right || 
+            controlBounds.bottom < rectBounds.top || 
+            controlBounds.top > rectBounds.bottom
+          );
+          
+          pairsChecked++;
+          
+          // If they overlap, ensure the proper visibility
+          if (isOverlapping) {
+            // If rect level is higher than control level, control should be hidden
+            if (rectLevel > controlLevel) {
+              // Control should be hidden - check if it is
+              const isMarkedOverlapped = controlElement.classList.contains('overlapped-control') || 
+                                       controlElement.getAttribute('data-overlapped') === 'true';
+                                       
+              const isActuallyHidden = getComputedStyle(controlElement).visibility === 'hidden' || 
+                                    getComputedStyle(controlElement).display === 'none';
+                                    
+              if (!isMarkedOverlapped || !isActuallyHidden) {
+                // Fix it - mark and hide
+                controlElement.classList.add('overlapped-control');
+                controlElement.setAttribute('data-overlapped', 'true');
+                
+                if (controlElement instanceof HTMLElement || controlElement instanceof SVGElement) {
+                  controlElement.style.setProperty('display', 'none', 'important');
+                  controlElement.style.setProperty('visibility', 'hidden', 'important');
+                  controlElement.style.setProperty('opacity', '0', 'important');
+                  controlElement.style.setProperty('pointer-events', 'none', 'important');
+                }
+                
+                additionalFixes++;
+                
+                logger.debug('Fixed overlapped control during comprehensive check', {
+                  _path: true,
+                  controlId,
+                  controlLevel,
+                  rectId,
+                  rectLevel,
+                  wasMarked: isMarkedOverlapped,
+                  wasHidden: isActuallyHidden
+                }, 'controls visibility');
+              }
+            }
+          }
+        });
+      });
+      
+      logger.info('Completed fixing overlapped controls', {
+        _path: true,
+        overlappedControlsFound: overlappedControls.length,
+        visibilityFixesApplied: fixedCount,
+        pairsChecked,
+        additionalFixesApplied: additionalFixes
+      }, 'controls visibility');
+      
+      // If we applied any fixes, force a visibility update
+      if (fixedCount > 0 || additionalFixes > 0) {
+        this.checkControlOverlaps();
+      }
+    } catch (error) {
+      logger.error('Failed to fix all overlapped controls', {
+        _path: true,
+        error: error instanceof Error ? error.message : String(error)
+      }, 'controls visibility');
+    }
+  }
+  
+  /**
    * Reset all controls' visibility state with enhanced deletion handling
    */
   public resetControlVisibility(): void {
@@ -719,6 +866,7 @@ export class ControlLayer extends BaseLayer {
       if (isStateBeingRestored()) return;
       
       logger.debug('Starting updateTaskPosition', {
+        _path: true,
         taskId,
         state: update.state
       }, 'controls layer');
@@ -728,6 +876,27 @@ export class ControlLayer extends BaseLayer {
         this.removeGroup(taskId);
         controlVisibilityManager.unregisterControl(`task-control-${taskId}`);
         return;
+      }
+      
+      // Handle custom opacity states - extract opacity value
+      let controlOpacity = 1.0;
+      if (typeof update.state === 'string' && update.state.startsWith('opacity-')) {
+        const opacityStr = update.state.replace('opacity-', '');
+        const parsedOpacity = parseFloat(opacityStr);
+        
+        if (!isNaN(parsedOpacity) && parsedOpacity >= 0 && parsedOpacity <= 1) {
+          controlOpacity = parsedOpacity;
+          
+          logger.debug('Applied graduated opacity to control', {
+            _path: true,
+            taskId,
+            opacityStr,
+            parsedOpacity,
+            state: update.state
+          }, 'controls graduated-opacity');
+        }
+      } else if (update.state === 'semi-transparent') {
+        controlOpacity = 0.5;
       }
 
       // Remove existing control if present
@@ -754,6 +923,7 @@ export class ControlLayer extends BaseLayer {
         
         // Log detailed mobile positioning for debugging
         logger.debug('Mobile device detected, using enhanced control positioning', {
+          _path: true,
           taskId,
           original: {
             x: update.x,
@@ -782,12 +952,36 @@ export class ControlLayer extends BaseLayer {
         state: update.state
       });
       
+      // Calculate proper control level
+      const taskLevel = svgOrderManager.getElementLevel(`task-${taskId}`);
+      
+      // Ensure we have a valid level (default to level 3 if not found)
+      if (isNaN(taskLevel) || taskLevel <= 0) {
+        logger.warn('Invalid task level for control, using default', {
+          _path: true,
+          taskId,
+          calculatedLevel: taskLevel
+        }, 'controls warning');
+      }
+      
+      // Control is one level above its task
+      const controlLevel = isNaN(taskLevel) || taskLevel <= 0 ? 3 : taskLevel + 1;
+      
+      logger.debug('Control level calculated', {
+        _path: true,
+        taskId,
+        taskLevel,
+        controlLevel,
+        relationship: 'control_level = task_level + 1'
+      }, 'controls level-calculation');
+      
       // Create split button group with enhanced positioning attributes
       const controlGroup = this.group.append('g')
         .attr('class', `task-control-${taskId} task-split-button`)  // Split button specific class
         .attr('data-task-id', taskId)
         .attr('data-control-type', 'split')  // Explicitly mark as split button
         .attr('data-id', `task-control-${taskId}`)
+        .attr('data-level', controlLevel.toString()) // Add level attribute for overlap detection
         .attr('transform', `translate(${x},${y})`) // SVG transform
         .attr('data-x', x) // Store x position as data attribute
         .attr('data-y', y) // Store y position as data attribute
@@ -796,6 +990,19 @@ export class ControlLayer extends BaseLayer {
       if (!controlGroup) {
         throw new Error('Failed to create control group');
       }
+      
+      // Apply custom opacity and state consistently
+      select(controlGroup)
+        .style('opacity', controlOpacity)
+        .attr('data-opacity', controlOpacity.toString())
+        .attr('data-state', update.state || 'active') // Add fallback value
+        .style('--exact-opacity', controlOpacity.toString()); // Add CSS variable for opacity
+        
+      logger.debug('Applied opacity and state to control', {
+        taskId,
+        controlOpacity,
+        state: update.state || 'active'
+      }, 'controls layer');
       
       // Add additional mobile-specific attributes if needed
       if (isMobile) {
@@ -811,24 +1018,6 @@ export class ControlLayer extends BaseLayer {
       // Register control with our internal tracking
       this.addGroup(taskId, controlGroup);
 
-      // Set up control hierarchy - make sure we calculate proper level
-      let taskLevel = svgOrderManager.getElementLevel(`task-${taskId}`);
-      
-      // Ensure we have a valid level (default to level 3 if not found)
-      if (isNaN(taskLevel) || taskLevel <= 0) {
-        logger.warn('Invalid task level for control, using default', {
-          taskId,
-          calculatedLevel: taskLevel
-        }, 'controls warning');
-        taskLevel = 3; // Default to FIRST_LEVEL_TASK
-      }
-      
-      // Control is one level above its task
-      const controlLevel = taskLevel + 1;
-
-      // Set data attribute for debugging
-      select(controlGroup).attr('data-level', controlLevel.toString());
-
       // Register with order manager
       svgOrderManager.registerElement(
         `task-control-${taskId}`, 
@@ -838,14 +1027,16 @@ export class ControlLayer extends BaseLayer {
       );
 
       // Register with overlap detector
+      const controlBounds = {
+        x: x - 15,
+        y: y - 15,
+        width: 30,
+        height: 30
+      };
+      
       overlapDetector.registerControl(
         `task-control-${taskId}`,
-        {
-          x: x - 15,
-          y: y - 15,
-          width: 30,
-          height: 30
-        },
+        controlBounds,
         controlLevel,
         `task-${taskId}`
       );
@@ -867,8 +1058,8 @@ export class ControlLayer extends BaseLayer {
         descendantCount: update.descendantCount
       });
 
-      // Ensure controls are non-interactive
-      select(controlGroup).style('pointer-events', 'none');
+      // Ensure controls start with correct pointer-events
+      select(controlGroup).style('pointer-events', 'auto');
 
       // Apply state-based visibility using animation coordinator
       if (update.state) {
@@ -880,17 +1071,63 @@ export class ControlLayer extends BaseLayer {
         );
       }
 
-      // Apply order and check overlaps
+      // Apply order
       svgOrderManager.applyOrder();
       
-      // Trigger overlap check after rendering
+      // Trigger overlap check after rendering by dispatching a custom event
+      if (typeof window !== 'undefined') {
+        // Dispatch both control-rendered and element-rendered events
+        window.dispatchEvent(new CustomEvent('control-rendered', {
+          detail: {
+            id: `task-control-${taskId}`,
+            taskId,
+            type: 'control',
+            level: controlLevel,
+            bounds: controlBounds
+          }
+        }));
+        
+        window.dispatchEvent(new CustomEvent('element-rendered', {
+          detail: {
+            id: `task-control-${taskId}`,
+            elementType: 'control',
+            level: controlLevel
+          }
+        }));
+        
+        // Also trigger overlap detector check
+        setTimeout(() => {
+          overlapDetector.updateVisibility();
+        }, 50);
+      }
+      
+      // Also do a traditional check for redundancy
       this.checkControlOverlaps();
+      
+      // Enhanced logging for control creation
+      logger.debug('Task control created', {
+        _path: true,
+        taskId,
+        controlId: `task-control-${taskId}`,
+        level: controlLevel,
+        position: { x, y },
+        state: update.state || 'active',
+        childrenCount: update.childrenCount ?? 0,
+        descendantCount: update.descendantCount ?? 0
+      }, 'controls layer');
 
     } catch (error) {
-      logger.error('Failed to update control position', { taskId, error }, 'controls error');
+      logger.error('Failed to update control position', { 
+        _path: true,
+        taskId, 
+        error 
+      }, 'controls error');
     }
   }
-
+  
+  /**
+   * Check control overlaps
+   */
   private checkControlOverlaps(): void {
     try {
       // Skip during state restoration
@@ -898,8 +1135,108 @@ export class ControlLayer extends BaseLayer {
       
       // Use the dedicated visibility manager to update visibility
       controlVisibilityManager.updateVisibility();
+      
+      // Additional debug check for any control issues
+      if (document.body.hasAttribute('data-debug-overlaps')) {
+        this.debugControlVisibility();
+      }
     } catch (error) {
       logger.error('Failed to check control overlaps', { error }, 'controls error');
+    }
+  }
+  
+  /**
+   * Debug control visibility issues
+   * This checks for specific overlap issues and fixes them
+   */
+  private debugControlVisibility(): void {
+    try {
+      // Get any specific debug pairs from the DOM
+      const debugPairs = document.body.getAttribute('data-debug-overlaps');
+      if (debugPairs) {
+        try {
+          // Format is "controlId1:rectId1,controlId2:rectId2"
+          const pairs = debugPairs.split(',');
+          
+          // Process each pair
+          pairs.forEach(pair => {
+            const [controlId, rectId] = pair.split(':');
+            if (controlId && rectId) {
+              // Use the dedicated debug method
+              overlapDetector.debugSpecificOverlap(controlId, rectId);
+            }
+          });
+        } catch (parseError) {
+          logger.error('Failed to parse debug pairs', { 
+            debugPairs, 
+            error: parseError 
+          }, 'controls debug');
+        }
+      }
+      
+      // Check for any controls with inconsistent visibility
+      const allControlGroups = document.querySelectorAll('.task-control, .task-split-button');
+      
+      // Sample a few controls for debugging
+      const sampleSize = Math.min(allControlGroups.length, 5);
+      const sampledControls = Array.from(allControlGroups)
+        .sort(() => 0.5 - Math.random()) // Shuffle
+        .slice(0, sampleSize);
+      
+      sampledControls.forEach(control => {
+        const controlId = control.id || 
+                        control.getAttribute('data-id') || 
+                        control.getAttribute('data-task-id');
+                        
+        if (controlId) {
+          const isMarkedOverlapped = control.classList.contains('overlapped-control') || 
+                                   control.getAttribute('data-overlapped') === 'true';
+                                   
+          const isActuallyHidden = getComputedStyle(control).visibility === 'hidden' || 
+                                getComputedStyle(control).display === 'none';
+                                
+          // If there's a discrepancy, log it
+          if (isMarkedOverlapped !== isActuallyHidden) {
+            logger.warn('Control visibility inconsistency detected', {
+              _path: true,
+              controlId,
+              isMarkedOverlapped,
+              isActuallyHidden,
+              classList: Array.from(control.classList),
+              styles: {
+                visibility: getComputedStyle(control).visibility,
+                display: getComputedStyle(control).display,
+                opacity: getComputedStyle(control).opacity
+              }
+            }, 'controls debug');
+            
+            // Fix the inconsistency
+            if (isMarkedOverlapped && !isActuallyHidden) {
+              // Should be hidden but isn't
+              if (control instanceof HTMLElement || control instanceof SVGElement) {
+                control.style.setProperty('display', 'none', 'important');
+                control.style.setProperty('visibility', 'hidden', 'important');
+                control.style.setProperty('opacity', '0', 'important');
+              }
+            } else if (!isMarkedOverlapped && isActuallyHidden) {
+              // Should be visible but isn't
+              if (control instanceof HTMLElement || control instanceof SVGElement) {
+                // Only restore visibility if not forced hidden for other reasons
+                if (!control.classList.contains('force-hidden-element') && 
+                    !control.classList.contains('hidden-during-operation')) {
+                  control.style.removeProperty('display');
+                  control.style.removeProperty('visibility');
+                  control.style.removeProperty('opacity');
+                }
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      logger.error('Failed to debug control visibility', { 
+        error: error instanceof Error ? error.message : String(error) 
+      }, 'controls debug');
     }
   }
 
@@ -1327,7 +1664,60 @@ export class ControlLayer extends BaseLayer {
     // Set up mobile-specific enhancements
     this.setupMobileEnhancements();
     
+    // Set up event listener for fixing all overlapped controls
+    this.setupFixOverlappedControlsListener();
+    
     logger.info('Control layer initialized with event-driven overlap detection and mobile support', {}, 'controls layer');
+  }
+  
+  /**
+   * Set up event listener for fixing all overlapped controls
+   * This ensures we fix any visibility inconsistencies after operations
+   */
+  private setupFixOverlappedControlsListener(): void {
+    // Operations that might break our overlap handling
+    const eventTypes = [
+      'project-task-added',
+      'project-task-changed',
+      'project-opened',
+      'task-regenerated',
+      'task-deleted',
+      'task-updated',
+      'split-completed',
+      'refresh-workspace',
+      'window-resized',
+      'refresh-overlapped-controls'
+    ];
+    
+    const handleEvent = () => {
+      try {
+        // Only do this if we have a valid DOM
+        if (typeof document === 'undefined') return;
+        
+        // Use a timeout to ensure all other handlers run first
+        setTimeout(() => {
+          this.fixAllOverlappedControls();
+        }, 300);
+      } catch (error) {
+        logger.error('Error handling fix overlapped controls event', {
+          error
+        }, 'controls visibility error');
+      }
+    };
+    
+    // Add event listeners for each event type
+    eventTypes.forEach(eventType => {
+      window.addEventListener(eventType, handleEvent);
+    });
+    
+    // Also set up a periodic check to ensure visibility remains consistent
+    // This is a safety measure in case other code resets visibility
+    if (typeof window !== 'undefined') {
+      setInterval(() => {
+        // Custom event for our interval checker
+        window.dispatchEvent(new CustomEvent('refresh-overlapped-controls'));
+      }, 5000);
+    }
   }
   
   /**

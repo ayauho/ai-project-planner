@@ -5,6 +5,7 @@ import { select } from 'd3-selection';
 
 // Define hierarchy level constants for better readability
 export enum HierarchyLevel {
+  // Higher numbers = higher visual hierarchy (appears on top)
   PROJECT = 1,
   PROJECT_COUNTER = 2,
   FIRST_LEVEL_TASK = 3,
