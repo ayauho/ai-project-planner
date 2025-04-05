@@ -201,7 +201,12 @@ const ProjectList = ({
   }, [onProjectDeleted]);
 
   const handleDelete = useCallback(async (event: React.MouseEvent, projectId: string, projectName: string) => {
+    // Stop propagation first to prevent the side panel from collapsing
     event.stopPropagation();
+    event.preventDefault();
+    
+    // Add a "dialog-active" class to the body to prevent other handlers
+    document.body.classList.add('dialog-active');
     
     const isSelected = projectId === selectedId;
     logger.info('Starting project deletion flow', { projectId, isSelected }, 'project list deletion');
@@ -220,6 +225,9 @@ const ProjectList = ({
         message: 'Failed to delete project. Please try again.',
         duration: 5000
       });
+    } finally {
+      // Remove the "dialog-active" class from the body
+      document.body.classList.remove('dialog-active');
     }
   }, [selectedId, showConfirmation, showError, deleteProject]);
 
@@ -254,8 +262,9 @@ const ProjectList = ({
             }`}
           ><div className="flex items-start justify-between group"><div className="flex flex-col"><div className="flex items-center"><span className="text-sm font-medium">{project.name}</span>{isSelecting && project.id === selectedId && (<Loader2 className="ml-2 w-3 h-3 text-blue-500 animate-spin" />)}</div><span className="text-xs text-gray-500">Tasks: {project.tasksCount} · Modified: {project.lastModifiedDate.toLocaleDateString()}</span></div><button
                 onClick={(e) => handleDelete(e, project.id, project.name)}
-                className="p-1 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-1 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity delete-project-button"
                 aria-label="Delete project"
+                data-delete-project="true"
               ><Trash2 className="w-4 h-4 text-red-500" /></button></div></div>
           );
         })}</div></div>);

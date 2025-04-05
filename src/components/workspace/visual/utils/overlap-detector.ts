@@ -74,12 +74,26 @@ class OverlapDetector {
         // Skip if we're already handling a render event
         if (this.renderEventHandled) return;
         
+        // Skip during side panel transitions
+        if (document.body.classList.contains('side-panel-transitioning')) {
+          return;
+        }
+        
         // Check if mutations are relevant to overlap detection
         const hasRelevantMutation = mutations.some(mutation => {
           if (!mutation.target) return false;
           
           const targetEl = mutation.target as Element;
           const className = targetEl.className?.toString() || '';
+          
+          // Skip mutations related to side panel
+          if (
+            targetEl.closest('[data-side-panel="true"]') || 
+            targetEl.getAttribute('data-side-panel') === 'true' ||
+            className.includes('side-panel')
+          ) {
+            return false;
+          }
           
           // Relevant classes for task rectangles and controls
           const isRectOrControl = (
@@ -185,11 +199,24 @@ class OverlapDetector {
     // Skip if already pending or during state restoration
     if (this.pendingCheck || isStateBeingRestored()) return;
     
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      logger.debug('Skipping overlap check during side panel transition', {}, 'overlap-detector optimization');
+      return;
+    }
+    
     // Use requestAnimationFrame for better performance and synchronization with rendering
     this.pendingCheck = true;
     
     // Use requestAnimationFrame for better performance
     requestAnimationFrame(() => {
+      // Double-check condition in case transition started after scheduling
+      if (document.body.classList.contains('side-panel-transitioning')) {
+        this.pendingCheck = false;
+        logger.debug('Cancelling scheduled overlap check - side panel transitioning', {}, 'overlap-detector optimization');
+        return;
+      }
+      
       this.pendingCheck = false;
       this.lastCheckTimestamp = Date.now();
       this.detectOverlaps();
@@ -428,6 +455,12 @@ class OverlapDetector {
       return this.lastVisibilityMap;
     }
     
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      logger.debug('Skipping overlap detection during side panel transition', {}, 'overlap-detector optimization');
+      return this.lastVisibilityMap;
+    }
+    
     const visibilityMap = new Map<string, boolean>();
     let hasChanges = false;
     
@@ -435,6 +468,12 @@ class OverlapDetector {
       // Check each control against all rectangles
       const controlEntries = Array.from(this.controls.entries());
       const rectEntries = Array.from(this.rectangles.entries());
+      
+      // Skip if there are no controls or rectangles to process
+      if (controlEntries.length === 0 || rectEntries.length === 0) {
+        logger.debug('Skipping overlap detection - no elements to process', {}, 'overlap-detector optimization');
+        return this.lastVisibilityMap;
+      }
       
       // Enhanced logging with path tracking
       logger.debug('Starting overlap detection cycle', {
@@ -944,16 +983,29 @@ class OverlapDetector {
   /**
    * Manually trigger an overlap check
    */
-  public requestCheck(): void {
+  public requestCheck(): boolean {
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      logger.debug('Skipping manual overlap check during side panel transition', {}, 'overlap-detector optimization');
+      return false;
+    }
+    
     this.scheduleOverlapCheck();
+    return true;
   }
   
   /**
    * Update visibility of controls based on overlap detection
    * This is a public method for external components to trigger visibility updates
    */
-  public updateVisibility(): void {
-    this.detectOverlaps();
+  public updateVisibility(): boolean {
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      logger.debug('Skipping control visibility updates during side panel transition', {}, 'overlap-detector optimization');
+      return false;
+    }
+    
+    return !!this.detectOverlaps();
   }
   
   /**

@@ -5,7 +5,7 @@ import { logger } from '@/lib/client/logger';
 import CollapseButton from './collapse-button';
 import { isMobileDevice } from '@/lib/client/utils/device-detection';
 
-const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
+const PanelContainer = ({ children, className = '' }: PanelContainerProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const initialRenderRef = useRef(true);
   const isSmallScreen = useRef(false);  // Initialization effect
@@ -13,7 +13,6 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
     try {
       // Check if we're on a small screen
       isSmallScreen.current = window.innerWidth <= 768 || isMobileDevice();
-      logger.debug('Side panel initialized', { isSmallScreen: isSmallScreen.current }, 'panel initialization');
       
       // Load saved state
       const savedState = localStorage.getItem('sidePanelCollapsed');
@@ -45,20 +44,32 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
       
       // If transitioning to small screen and panel is expanded, collapse it
       if (!wasSmallScreen && isSmallScreen.current && !isCollapsed) {
-        logger.debug('Window resized to small screen, auto-collapsing panel', {}, 'panel ui responsive');
         setIsCollapsed(true);
         localStorage.setItem('sidePanelCollapsed', 'true');
-        updateSidePanelWidthVar(true);
       }
     };
     
     // Set up main content touch/click handler for small screens
     const handleMainContentTouch = (e: MouseEvent | TouchEvent) => {
+      // Skip if dialog is active
+      if (document.body.classList.contains('dialog-active')) {
+        logger.debug('Skipping panel collapse - dialog is active', {}, 'panel ui state');
+        return;
+      }
+      
       if (isSmallScreen.current && !isCollapsed) {
         // Only collapse when touching main content, not the side panel
         const target = e.target as HTMLElement;
-        if (!target.closest('[data-side-panel="true"]')) {
-          logger.debug('Main content touched on small screen, collapsing panel', {}, 'panel ui responsive');
+        
+        // Enhanced exclusion checks - comprehensive list of dialog-related elements
+        if (!target.closest('[data-side-panel="true"]') && 
+            !target.closest('.project-delete-confirm') && 
+            !target.closest('.delete-project-dialog') &&
+            !target.closest('.delete-project-button') &&
+            !target.closest('[data-delete-project="true"]') &&
+            !target.closest('[data-delete-dialog="true"]') &&
+            !target.closest('[data-delete-dialog-button]') &&
+            !target.closest('[role="dialog"]')) {
           handleToggle();
           e.preventDefault();
         }
@@ -80,49 +91,35 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
       document.removeEventListener('click', handleMainContentTouch);
       document.removeEventListener('touchstart', handleMainContentTouch);
     };
-  }, [isCollapsed]);// Update side panel state - simplified approach that doesn't rely on CSS variables
-  const updateSidePanelWidthVar = (collapsed: boolean) =>{
-    try {
-      // Force resize event to update SVG dimensions after a short delay
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 250);
-      
-      // Dispatch event for immediate UI updates
-      window.dispatchEvent(new CustomEvent('side-panel-state-change', {
-        detail: { 
-          collapsed,
-          isSmallScreen: isSmallScreen.current
-        }
-      }));
-      
-      logger.debug('Updated side panel state', { 
-        collapsed, 
-        isSmallScreen: isSmallScreen.current
-      }, 'panel ui styles');
-    } catch (error) {
-      logger.error('Failed to update side panel state', { error: String(error) }, 'panel ui styles error');
-    }
-  };
-
-  // Initialize side panel width variable on component mount
-  useEffect(() =>{
-    updateSidePanelWidthVar(isCollapsed);
   }, [isCollapsed]);
+  
+  // This function is completely removed - we don't need any extra operations
 
-  // Listen for custom collapse events
-  useEffect(() =>{
-    const handleForceCollapse = () =>{
+  // No initialization effect needed
+
+  // Listen for custom collapse events - but keep extremely minimal
+  useEffect(() => {
+    const handleForceCollapse = () => {
+      // Skip if dialog is active
+      if (document.body.classList.contains('dialog-active')) {
+        logger.debug('Skipping forced panel collapse - dialog is active', {}, 'panel ui state');
+        return;
+      }
+      
       if (!isCollapsed) {
-        logger.debug('Force collapsing side panel from external event', {}, 'panel ui event');
         handleToggle();
       }
     };
     
     // Listen for project selection events to auto-collapse on small screens
-    const handleProjectSelected = (_event: Event) =>{
+    const handleProjectSelected = () => {
+      // Skip if dialog is active
+      if (document.body.classList.contains('dialog-active')) {
+        logger.debug('Skipping project-selected collapse - dialog is active', {}, 'panel ui state');
+        return;
+      }
+      
       if (isSmallScreen.current && !isCollapsed) {
-        logger.debug('Project selected on small screen, auto-collapsing panel', {}, 'panel ui responsive');
         handleToggle();
       }
     };
@@ -130,49 +127,33 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
     window.addEventListener('force-collapse-side-panel', handleForceCollapse);
     window.addEventListener('project-selected', handleProjectSelected);
     
-    return () =>{
+    return () => {
       window.removeEventListener('force-collapse-side-panel', handleForceCollapse);
       window.removeEventListener('project-selected', handleProjectSelected);
     };
   }, [isCollapsed]);
 
-  const handleToggle = () =>{
+  // RADICALLY SIMPLIFIED toggle function - absolutely minimal operations
+  const handleToggle = () => {
     try {
-      // Add transition blocker class to prevent SVG transform changes
-      document.body.classList.add('side-panel-transitioning');
+      // Skip if dialog is active
+      if (document.body.classList.contains('dialog-active')) {
+        logger.debug('Skipping panel toggle - dialog is active', {}, 'panel ui state');
+        return;
+      }
       
-      // Toggle collapsed state
+      // ONLY these two operations: update state + save to localStorage
       const newState = !isCollapsed;
       setIsCollapsed(newState);
-      
-      // Save to localStorage
       localStorage.setItem('sidePanelCollapsed', JSON.stringify(newState));
       
-      // Update side panel width CSS variable
-      updateSidePanelWidthVar(newState);
-      
-      logger.info('Side panel toggle', { isCollapsed: newState }, 'panel ui state');
-      
-      // Dispatch toggle complete event after transition
-      setTimeout(() =>{
-        // Remove transition blocker
-        document.body.classList.remove('side-panel-transitioning');
-        
-        // Notify toggle complete
-        window.dispatchEvent(new CustomEvent('side-panel-toggle-complete', {
-          detail: { isCollapsed: newState }
-        }));
-        
-        // Force resize event to update SVG dimensions
-        window.dispatchEvent(new Event('resize'));
-      }, 300); // Slightly longer than CSS transition
+      // Minimal logging with no extra operations
+      logger.info('Side panel toggle - minimal operation', { isCollapsed: newState }, 'panel ui state');
     } catch (error) {
-      // Ensure class is removed even on error
-      document.body.classList.remove('side-panel-transitioning');
       logger.error('Failed to toggle side panel', { error: String(error) }, 'panel ui error');
     }
-  };
-
+  };  
+  
   return (<aside
       role="complementary"
       aria-label="Side Panel"
@@ -186,11 +167,15 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
       }}
       // Add click/touch handler to expand collapsed panel on small screens
       onClick={(e) => {
+        // Skip if dialog is active
+        if (document.body.classList.contains('dialog-active')) {
+          return;
+        }
+        
         if (isSmallScreen.current && isCollapsed) {
           // Prevent expansion when clicking the collapse button itself
           const target = e.target as HTMLElement;
           if (!target.closest('.panel-collapse-button')) {
-            logger.debug('Collapsed panel touched on small screen, expanding panel', {}, 'panel ui responsive');
             handleToggle();
             e.stopPropagation();
           }
@@ -201,7 +186,6 @@ const PanelContainer = ({ children, className = '' }: PanelContainerProps) =>{
           onToggle={handleToggle}
         /></div>{/* Content container with proper overflow handling */}<div className="h-full overflow-hidden pt-12 px-4 pr-0">{/* Only hide content when collapsed */}<div 
           className={`h-full ${isCollapsed ? 'invisible opacity-0' : 'visible opacity-100'}`}
-          style={{ transition: 'opacity 0.2s ease-out, visibility 0.2s ease-out' }}
           aria-hidden={isCollapsed}
         >{children}</div></div></aside>);
 };

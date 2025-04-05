@@ -1,0 +1,21 @@
+/* Ensure dialogs and their contents handle events properly */
+.project-delete-confirm,
+.delete-project-dialog,
+.project-delete-confirm *,
+.delete-project-dialog * {
+  pointer-events: auto !important;
+}
+
+/* Add higher z-index to ensure dialogs are above other elements */
+.project-delete-confirm,
+.delete-project-dialog {
+  z-index: 100 !important;
+  position: relative;
+}
+
+/* Make sure dialog buttons work properly */
+.project-delete-confirm button,
+.delete-project-dialog button {
+  position: relative;
+  z-index: 101 !important;
+}

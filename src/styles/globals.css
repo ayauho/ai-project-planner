@@ -801,3 +801,72 @@ main,
   background-color: white !important;
   color: #111827 !important;
 }
+/* Dialog handling during project deletion */
+body.dialog-active {
+  overflow: hidden;
+}
+
+/* Ensure dialogs are properly layered */
+body.dialog-active [role="dialog"] {
+  z-index: 50;
+}
+
+body.dialog-active .side-panel-transitioning {
+  display: none !important;
+}
+
+.project-delete-confirm,
+.delete-project-dialog,
+.project-delete-confirm *,
+.delete-project-dialog *,
+[data-delete-dialog="true"],
+[data-delete-dialog="true"] *,
+[data-delete-dialog-button],
+[role="dialog"] button {
+  pointer-events: auto !important;
+}
+
+/* Add higher z-index to ensure dialogs are above other elements */
+.project-delete-confirm,
+.delete-project-dialog,
+[data-delete-dialog="true"],
+[role="dialog"] {
+  z-index: 100 !important;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  max-width: 90vw !important;
+  width: auto !important;
+}
+
+/* Make sure dialog buttons work properly */
+.project-delete-confirm button,
+.delete-project-dialog button,
+[data-delete-dialog="true"] button,
+[data-delete-dialog-button],
+[role="dialog"] button {
+  position: relative !important;
+  z-index: 101 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure no outside clicks can affect dialogs */
+body.dialog-active::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 49;
+  pointer-events: none;
+}
+
+/* Explicit styles for delete project button */
+.delete-project-button,
+[data-delete-project="true"] {
+  position: relative !important;
+  z-index: 40 !important;
+}

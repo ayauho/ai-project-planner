@@ -50,10 +50,29 @@ class ControlVisibilityManager {
     try {
       const observer = new MutationObserver(this.handleDomMutations.bind(this));
       
+      // Add listeners for side panel state changes
+      if (typeof window !== 'undefined') {
+        // Add global property to block processing
+        (window as any).blockAllProcessing = false;
+        
+        // Only listen for side-panel-state-change events
+        window.addEventListener('side-panel-state-change', (event: Event) => {
+          const customEvent = event as CustomEvent;
+          // Check if event has doNotProcess flag
+          if (customEvent.detail?.doNotProcess) {
+            logger.debug('Skipping processing for side panel state change with doNotProcess flag', {}, 'controls visibility optimization');
+            return;
+          }
+        });
+        
+        // Remove the post-transition update to prevent blinking
+        // Note: We're deliberately NOT triggering any visibility updates when panel transitions complete
+      }
+      
       // Start observing after a delay to ensure DOM is ready
       setTimeout(() => {
         const workspace = document.querySelector('.workspace-visual');
-        if (workspace) {
+        if (workspace && !document.body.classList.contains('side-panel-transitioning')) {
           observer.observe(workspace, { 
             childList: true,
             subtree: true,
@@ -64,9 +83,22 @@ class ControlVisibilityManager {
             _path: true
           }, 'controls visibility');
           
-          // Register with custom event system for controls rendering
-          window.addEventListener('control-rendered', this.handleControlRendered.bind(this));
-          window.addEventListener('rectangle-rendered', this.handleRectangleRendered.bind(this));
+          // Register with custom event system for controls rendering - only if not transitioning
+          window.addEventListener('control-rendered', (event) => {
+            // Skip ALL processing if global block is active
+            if ((window as any).blockAllProcessing) {
+              return;
+            }
+            this.handleControlRendered(event);
+          });
+          
+          window.addEventListener('rectangle-rendered', (event) => {
+            // Skip ALL processing if global block is active
+            if ((window as any).blockAllProcessing) {
+              return;
+            }
+            this.handleRectangleRendered(event);
+          });
         }
       }, 1000);
     } catch (error) {
@@ -83,6 +115,11 @@ class ControlVisibilityManager {
   private handleControlRendered(event: Event): void {
     // Skip if we're already pending an update or during state restoration
     if (this.pendingUpdate || isStateBeingRestored()) return;
+    
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      return;
+    }
     
     try {
       const customEvent = event as CustomEvent;
@@ -111,6 +148,11 @@ class ControlVisibilityManager {
     // Skip if we're already pending an update or during state restoration
     if (this.pendingUpdate || isStateBeingRestored()) return;
     
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      return;
+    }
+    
     try {
       const customEvent = event as CustomEvent;
       const detail = customEvent.detail || {};
@@ -138,11 +180,24 @@ class ControlVisibilityManager {
     // Skip if we're already pending an update or during state restoration
     if (this.pendingUpdate || isStateBeingRestored()) return;
     
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      return;
+    }
+    
     // Check if any of the mutations are related to controls or task elements
     const relevantMutation = mutations.some(mutation => {
       if (!mutation.target) return false;
       
       const targetEl = mutation.target as Element;
+      
+      // Skip mutations related to side panel
+      if (targetEl.closest('[data-side-panel="true"]') || 
+          targetEl.getAttribute('data-side-panel') === 'true' ||
+          (targetEl.className && targetEl.className.toString().includes('side-panel'))) {
+        return false;
+      }
+      
       const className = targetEl.className?.toString() || '';
       
       // Check for relevant class names
@@ -188,18 +243,72 @@ class ControlVisibilityManager {
     // Skip if an update is already pending or during state restoration
     if (this.pendingUpdate || isStateBeingRestored()) return;
     
+    // Skip during side panel transitions
+    if (document.body.classList.contains('side-panel-transitioning')) {
+      logger.debug('Skipping throttled visibility update during side panel transition', {}, 'controls visibility optimization');
+      return;
+    }
+    
+    // Skip ALL processing if global block is active
+    if ((window as any).blockAllProcessing) {
+      logger.debug('Skipping throttled update due to global processing block', {}, 'controls visibility optimization');
+      return;
+    }
+    
+    // Skip processing if we're in side panel state change
+    if (document.body.hasAttribute('data-side-panel-state-changing')) {
+      logger.debug('Skipping throttled update during side panel state change', {}, 'controls visibility optimization');
+      return;
+    }
+    
+    // Add even more throttling - check if any visibility updates have happened in the last second
     const now = Date.now();
     const timeSinceLastUpdate = now - this.lastUpdateTimestamp;
     
-    if (timeSinceLastUpdate < this.updateThrottleDelay) {
-      // Schedule update for later
+    // If last update was very recent, add significant delay to batch updates
+    if (timeSinceLastUpdate < 1000) { 
+      // Schedule update for later with a minimum 1 second delay
       this.pendingUpdate = true;
       setTimeout(() => {
+        // Multiple checks before allowing update
+        if (document.body.classList.contains('side-panel-transitioning') || 
+            (window as any).blockAllProcessing ||
+            document.body.hasAttribute('data-side-panel-state-changing')) {
+          this.pendingUpdate = false;
+          logger.debug('Cancelling scheduled visibility update - side panel operations in progress', {}, 'controls visibility optimization');
+          return;
+        }
+        
         this.pendingUpdate = false;
         this.lastUpdateTimestamp = Date.now();
         this.updateVisibility();
-      }, this.updateThrottleDelay - timeSinceLastUpdate);
+      }, Math.max(1000, this.updateThrottleDelay - timeSinceLastUpdate + 50)); // Minimum 1 second delay
+    } else if (timeSinceLastUpdate < this.updateThrottleDelay) {
+      // Standard scheduling with smaller delay
+      this.pendingUpdate = true;
+      setTimeout(() => {
+        // Multiple checks before allowing update
+        if (document.body.classList.contains('side-panel-transitioning') || 
+            (window as any).blockAllProcessing ||
+            document.body.hasAttribute('data-side-panel-state-changing')) {
+          this.pendingUpdate = false;
+          logger.debug('Cancelling scheduled visibility update - side panel operations in progress', {}, 'controls visibility optimization');
+          return;
+        }
+        
+        this.pendingUpdate = false;
+        this.lastUpdateTimestamp = Date.now();
+        this.updateVisibility();
+      }, this.updateThrottleDelay - timeSinceLastUpdate + 50); // Add small buffer
     } else {
+      // Final check before immediate update
+      if (document.body.classList.contains('side-panel-transitioning') || 
+          (window as any).blockAllProcessing ||
+          document.body.hasAttribute('data-side-panel-state-changing')) {
+        logger.debug('Skipping immediate visibility update - side panel operations in progress', {}, 'controls visibility optimization');
+        return;
+      }
+      
       // Update immediately
       this.lastUpdateTimestamp = now;
       this.updateVisibility();
@@ -373,14 +482,38 @@ class ControlVisibilityManager {
       // Skip during state restoration
       if (isStateBeingRestored()) return;
       
-      // Log that we're starting visibility update
-      logger.debug('Starting control visibility update', {
-        _path: true, 
-        timestamp: Date.now()
-      }, 'controls visibility');
+      // Skip during side panel transitions
+      if (document.body.classList.contains('side-panel-transitioning')) {
+        logger.debug('Skipping control visibility processing during side panel transition', {}, 'controls visibility optimization');
+        return;
+      }
       
-      // Get visibility map from overlap detector
+      // Skip ALL processing if global block is active
+      if ((window as any).blockAllProcessing) {
+        logger.debug('Skipping control visibility due to global processing block', {}, 'controls visibility optimization');
+        return;
+      }
+      
+      // Skip processing if we're in side panel state change
+      if (document.body.hasAttribute('data-side-panel-state-changing')) {
+        logger.debug('Skipping control visibility during side panel state change', {}, 'controls visibility optimization');
+        return;
+      }
+      
+      // Log that we're starting visibility update - only once per batch
+      if (!this.pendingUpdate) {
+        logger.debug('Starting control visibility update', {
+          _path: true, 
+          timestamp: Date.now()
+        }, 'controls visibility');
+      }
+      
+      // Get visibility map from overlap detector - if it returns false, skip further processing
       const visibilityMap = overlapDetector.detectOverlaps();
+      if (!visibilityMap) {
+        logger.debug('Overlap detection skipped or returned empty result', {}, 'controls visibility optimization');
+        return;
+      }
 
       // Get current workspace state (with safety check)
       const workspaceState = workspaceStateManager.getState();
@@ -443,14 +576,17 @@ class ControlVisibilityManager {
           // Get element level for detailed logging - use a different variable name to avoid conflicts
           const controlElementLevel = element.getAttribute('data-level');
           
-          logger.debug('Processing control visibility', {
-            _path: true,
-            controlId,
-            taskId: control.taskId,
-            initialVisibility: isVisible,
-            taskState,
-            controlElementLevel
-          }, 'controls visibility');
+          // Only log at the batch level rather than for each control
+          if (this.controlRegistry.size <= 5) {
+            logger.debug('Processing control visibility', {
+              _path: true,
+              controlId,
+              taskId: control.taskId,
+              initialVisibility: isVisible,
+              taskState,
+              controlElementLevel
+            }, 'controls visibility');
+          }
   
           if (taskState === 'hidden') {
             isVisible = false;

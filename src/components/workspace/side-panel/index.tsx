@@ -14,13 +14,18 @@ interface SidePanelProps {
   userId?: string;
 }
 
-const SidePanel = ({ userId }: SidePanelProps) =>{
+const SidePanel = ({ userId }: SidePanelProps) => {
   const [showProjectCreation, setShowProjectCreation] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('last-modified');
   
   // Keep the button style in sync with the app state
-  useEffect(() =>{
-    const handleStateChange = (state: { showProjectCreation: boolean }) =>{
+  useEffect(() => {
+    const handleStateChange = (state: { showProjectCreation: boolean }) => {
+      // Skip during side panel transitions
+      if (document.body.classList.contains('side-panel-transitioning') || 
+          document.body.classList.contains('dialog-active')) {
+        return;
+      }
       setShowProjectCreation(state.showProjectCreation);
     };
     
@@ -29,32 +34,107 @@ const SidePanel = ({ userId }: SidePanelProps) =>{
     
     // Subscribe to changes
     const unsubscribe = workspaceStateManager.subscribe(handleStateChange);
-    return () =>unsubscribe();
+    return () => unsubscribe();
   }, []);
 
-  const handleProjectSelect = async (id: string) =>{
+  // Add event listener to handle global processing block
+  useEffect(() => {
+    // Set global property if not exists
+    if (typeof window !== 'undefined' && (window as any).blockAllProcessing === undefined) {
+      (window as any).blockAllProcessing = false;
+    }
+    
+    // Listen for dialog state changes
+    const handleDialogStateChange = () => {
+      // When a dialog opens, set a flag to block processing
+      if (document.body.classList.contains('dialog-active')) {
+        (window as any).blockAllProcessing = true;
+        logger.debug('Dialog active - setting global processing block', {}, 'panel ui state');
+      } else {
+        (window as any).blockAllProcessing = false;
+        logger.debug('Dialog inactive - clearing global processing block', {}, 'panel ui state');
+      }
+    };
+    
+    // Use MutationObserver to detect class changes on the body element
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          handleDialogStateChange();
+        }
+      });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const handleProjectSelect = async (id: string) => {
     try {
-      logger.info('Project selected in side panel', { id }, 'project panel selection');
-      await workspaceStateManager.selectProject(id);
+      // Prevent selecting project during transitions
+      if (document.body.classList.contains('side-panel-transitioning') || 
+          document.body.classList.contains('dialog-active') ||
+          ((window as any).blockAllProcessing === true)) {
+        logger.debug('Ignoring project selection - side panel transition or dialog active', {}, 'panel ui state');
+        return;
+      }
       
-      // Dispatch project selected event for auto-collapse on small screens
-      window.dispatchEvent(new CustomEvent('project-selected', { 
-        detail: { projectId: id } 
-      }));
+      logger.info('Project selected in side panel', { id }, 'project panel selection');
+      
+      // Set a flag to indicate project selection is in progress
+      document.body.classList.add('project-selection-in-progress');
+      
+      try {
+        await workspaceStateManager.selectProject(id);
+        
+        // Dispatch project selected event for auto-collapse on small screens
+        // Small delay to allow state to update first
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('project-selected', { 
+            detail: { projectId: id } 
+          }));
+          
+          // Remove the flag
+          document.body.classList.remove('project-selection-in-progress');
+        }, 50);
+      } catch (error) {
+        // Make sure to remove the flag even on error
+        document.body.classList.remove('project-selection-in-progress');
+        throw error;
+      }
     } catch (error) {
       logger.error('Failed to select project', { error: String(error) }, 'project panel selection error');
     }
   };
 
-  const handleCreateProject = () =>{
+  const handleCreateProject = (e: React.MouseEvent) => {
+    // Prevent the default action and stop propagation
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Prevent creating project during transitions
+    if (document.body.classList.contains('side-panel-transitioning') || 
+        document.body.classList.contains('dialog-active') ||
+        ((window as any).blockAllProcessing === true)) {
+      logger.debug('Ignoring create project - side panel transition or dialog active', {}, 'panel ui state');
+      return;
+    }
+    
     logger.info('Create project button clicked', {}, 'project panel ui');
     workspaceStateManager.showProjectCreation();
     
     // On small screens, auto-collapse side panel when creating project
-    if (window.innerWidth<= 768) {
+    if (window.innerWidth <= 768) {
       logger.debug('Auto-collapsing side panel on small screen', {}, 'panel ui mobile');
-      // Dispatch event to collapse side panel
-      window.dispatchEvent(new CustomEvent('force-collapse-side-panel'));
+      
+      // Add a small delay to prevent UI conflicts
+      setTimeout(() => {
+        // Dispatch event to collapse side panel
+        window.dispatchEvent(new CustomEvent('force-collapse-side-panel'));
+      }, 50);
     }
   };
 
@@ -67,9 +147,17 @@ const SidePanel = ({ userId }: SidePanelProps) =>{
               onClick={handleCreateProject}
               className={`w-full flex items-center gap-2 ${showProjectCreation ? 'bg-blue-100 border-blue-500' : ''}`}
               variant="outline"
+              data-action="create-project"
             ><PlusCircle className="w-4 h-4" />Create Project</Button></div></div>{/* Project list header with sort controls */}<div className="flex justify-between items-center px-2 mb-2 flex-shrink-0"><h3 className="text-sm font-medium">Projects</h3><select 
             value={sortBy}
-            onChange={e =>{
+            onChange={e => {
+              // Skip state changes during transitions
+              if (document.body.classList.contains('side-panel-transitioning') || 
+                  document.body.classList.contains('dialog-active') ||
+                  ((window as any).blockAllProcessing === true)) {
+                return;
+              }
+                
               const newSortOption = e.target.value as SortOption;
               setSortBy(newSortOption);
               logger.debug('Sort option changed', { sortBy: newSortOption }, 'project panel sorting');
@@ -81,6 +169,7 @@ const SidePanel = ({ userId }: SidePanelProps) =>{
               backgroundSize: '1.5em 1.5em',
               paddingRight: '1.75rem'
             }}
+            data-action="sort-selector"
           ><option value="last-modified">Last Modified</option><option value="creation-date">Creation Date</option><option value="alphabetical">Alphabetical</option></select></div>{/* Project selector with data-project-list attribute */}<div className="flex-grow overflow-auto h-full" data-project-list="true"><ProjectSelector 
             userId={userId} 
             onProjectSelect={handleProjectSelect}
